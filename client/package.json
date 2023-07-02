@@ -1,0 +1,53 @@
+{
+	"name": "esheeq-client",
+	"version": "1.0.0",
+	"description": "Scrap dailymotion episodes links for a given series directly from esheeq",
+	"private": true,
+	"repository": {
+		"type": "git",
+		"url": "git+github.com/Ysn4Irix/esheeq-scraper.git"
+	},
+	"keywords": [
+		"javascript",
+		"nodejs",
+		"scraper",
+		"esheeq",
+		"svelte",
+		"tailwindcss",
+		"preline",
+		"sveltekit"
+	],
+	"author": {
+		"name": "Ysn4Irix",
+		"email": "ysn4irix@gmail.com",
+		"url": "https://ysnirix.xyz"
+	},
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/Ysn4Irix/esheeq-scraper/issues"
+	},
+	"homepage": "github.com/Ysn4Irix/esheeq-scraper#readme",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"lint": "prettier --plugin-search-dir . --check .",
+		"format": "prettier --plugin-search-dir . --write ."
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-node": "^1.2.4",
+		"@sveltejs/kit": "^1.20.4",
+		"@tailwindcss/forms": "^0.5.3",
+		"autoprefixer": "^10.4.14",
+		"postcss": "^8.4.24",
+		"postcss-load-config": "^4.0.1",
+		"preline": "^1.9.0",
+		"prettier": "^2.8.0",
+		"prettier-plugin-svelte": "^2.10.1",
+		"prettier-plugin-tailwindcss": "^0.3.0",
+		"svelte": "^4.0.0",
+		"tailwindcss": "^3.3.2",
+		"vite": "^4.3.6"
+	},
+	"type": "module"
+}

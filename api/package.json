@@ -1,0 +1,54 @@
+{
+	"name": "esheeq-api",
+	"version": "1.0.0",
+	"description": "an express api that scrap dailymotion episodes links for a given series directly from esheeq",
+	"main": "server.js",
+	"scripts": {
+		"start": "node server.js",
+		"dev": "nodemon server.js",
+		"format": "prettier --write \"./**/*.{js,json}\""
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+github.com/Ysn4Irix/esheeq-scraper.git"
+	},
+	"keywords": [
+		"api",
+		"express",
+		"nodejs",
+		"esheeq",
+		"scraper",
+		"cheerio",
+		"redis"
+	],
+	"author": {
+		"name": "Ysn4Irix",
+		"email": "ysn4irix@gmail.com",
+		"url": "https://ysnirix.xyz"
+	},
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/Ysn4Irix/esheeq-scraper/issues"
+	},
+	"homepage": "github.com/Ysn4Irix/esheeq-scraper#readme",
+	"dependencies": {
+		"axios": "^1.4.0",
+		"base-64": "^1.0.0",
+		"cheerio": "1.0.0-rc.12",
+		"cors": "^2.8.5",
+		"express": "^4.18.2",
+		"express-rate-limit": "^6.7.0",
+		"helmet": "^6.0.0",
+		"redis": "^4.6.7",
+		"response-time": "^2.3.2"
+	},
+	"devDependencies": {
+		"@types/express": "^4.17.13",
+		"@types/node": "^18.7.13",
+		"@types/validator": "^13.7.17",
+		"dotenv": "^16.3.1",
+		"nodemon": "^2.0.19",
+		"prettier": "^2.7.1",
+		"signale": "^1.4.0"
+	}
+}

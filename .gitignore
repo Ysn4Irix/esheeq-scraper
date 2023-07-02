@@ -1,0 +1,9 @@
+.DS_Store
+/api/node_modules
+/api/.env
+
+/client/node_modules
+/client/build
+/client/.svelte-kit
+/client/vite.config.js.timestamp-*
+/client/vite.config.ts.timestamp-*
