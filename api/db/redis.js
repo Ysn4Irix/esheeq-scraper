@@ -7,8 +7,8 @@ const client = redis.createClient({
 	socket: {
 		host: REDIS_HOST,
 		port: REDIS_PORT
-	}
-	//password: REDIS_PASSWORD
+	},
+	password: REDIS_PASSWORD
 })
 
 client.connect().then(() => logger.success('Client connected to redis...'))
