@@ -53,7 +53,7 @@
 
 		<!-- Grid -->
 		<ul
-			class="grid grid-cols-1 gap-6 sm:grid-cols-1 sm:place-items-center md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4"
+			class="xs:grid-cols-1 xs:place-items-center grid grid-cols-1 gap-6 sm:grid-cols-1 sm:place-items-center md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4"
 		>
 			{#each data.results.data.dailyLinks.slice(0, first) as item}
 				<li
