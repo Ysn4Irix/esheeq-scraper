@@ -52,7 +52,9 @@
 		<!-- End Infos -->
 
 		<!-- Grid -->
-		<ul class="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+		<ul
+			class="grid grid-cols-1 gap-6 sm:grid-cols-1 sm:place-items-center md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4"
+		>
 			{#each data.results.data.dailyLinks.slice(0, first) as item}
 				<li
 					in:fly={{ y: 50, duration: 500, delay: 500 }}
