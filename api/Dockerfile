@@ -7,9 +7,9 @@ ARG REDIS_PASSWORD=${REDIS_PASSWORD}
 ENV REDIS_PASSWORD=${REDIS_PASSWORD}
 
 WORKDIR /app
-COPY package.json .
+COPY ./api/package.json .
 RUN npm install --location=global pnpm
 RUN pnpm install
-COPY . .
+COPY ./api .
 EXPOSE 4000
 CMD ["node", "server.js"]
