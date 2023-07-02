@@ -30,9 +30,10 @@ Live demo: [https://esheeq.ysnirix.xyz](https://esheeq.ysnirix.xyz)
 Once you've cloned the project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
 
 ```bash
-pnpm run dev
-# or start and open the app in a new browser tab
-pnpm run dev -- --open
+# For Api server
+cd api && pnpm install && pnpm run dev
+# For client
+cd client && pnpm install && pnpm run dev
 ```
 
 ### Building
