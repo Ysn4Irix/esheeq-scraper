@@ -26,7 +26,7 @@ const fetchHtml = async url => {
 			return null
 		}
 	}
-	redisClient.setEx(htmlDataKey, 604800, htmlData)
+	redisClient.setEx(htmlDataKey, 86400, htmlData)
 	return htmlData
 }
 
@@ -54,7 +54,7 @@ const fetchEpisodesHtml = async (seriesId, url) => {
 			return null
 		}
 	}
-	redisClient.setEx(EpisodesHtmlDataKey, 604800, htmlData)
+	redisClient.setEx(EpisodesHtmlDataKey, 86400, htmlData)
 	return htmlData
 }
 
@@ -85,7 +85,7 @@ const fetchDailyLinks = async (seriesId, episodesUrls) => {
 			}
 		}
 	}
-	redisClient.setEx(dailyLinksKey, 604800, JSON.stringify(dailyLinks))
+	redisClient.setEx(dailyLinksKey, 86400, JSON.stringify(dailyLinks))
 	return dailyLinks
 }
 
@@ -103,7 +103,7 @@ const search = async query => {
 	} else {
 		logger.info(`Cache miss for ${searchHtmlKey}`)
 		searchHtml = await fetchHtml(`${base_url}/search/${query}`)
-		redisClient.setEx(searchHtmlKey, 31557600, searchHtml)
+		redisClient.setEx(searchHtmlKey, 86400, searchHtml)
 	}
 
 	const $ = cheerio.load(searchHtml)
