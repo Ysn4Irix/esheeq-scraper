@@ -1,6 +1,8 @@
 <script>
 	import { API_URL } from '$lib/constants.js'
 	import Nav from '$lib/components/Nav.svelte'
+	import SearchCard from '$lib/components/SearchCard.svelte'
+	import { fly } from 'svelte/transition'
 
 	/** @type {array<string>} */
 	let searchResults = []
@@ -34,15 +36,13 @@
 <div class="relative overflow-hidden">
 	<div class="mx-auto max-w-[85rem] px-4 py-16 sm:px-6 sm:py-16 lg:px-8">
 		<div class="text-center">
-			<h1
-				class="font-pacifico text-5xl font-semibold text-red-700 dark:text-red-500 sm:text-5xl md:text-6xl"
-			>
+			<h1 class="font-pacifico text-5xl font-semibold text-red-700 dark:text-red-500 sm:text-5xl md:text-6xl">
 				Esheeq
 			</h1>
 
 			<p class="mt-6 text-gray-600 dark:text-gray-400">
-				<span class="font-pacifico font-semibold">Scrap</span> dailymotion episodes links for a
-				given series directly from <span class="font-pacifico font-semibold">esheeq</span>
+				<span class="font-pacifico font-semibold">Scrap</span> dailymotion episodes links for a given series directly
+				from <span class="font-pacifico font-semibold">esheeq</span>
 			</p>
 
 			<div class="relative mx-auto mt-8 max-w-xl sm:mt-8">
@@ -119,17 +119,20 @@
 			</div>
 			<div class="mt-10 sm:mt-20">
 				{#if searchResults.length > 0}
-					{#each searchResults as item}
-						<a
-							data-sveltekit-preload-data="hover"
-							aria-label="Go to series page"
-							id={item.id}
-							class="m-1 inline-flex items-center justify-center gap-2 rounded-md border bg-white px-4 py-3 align-middle text-sm font-semibold text-gray-700 shadow-sm transition-all hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:ring-offset-white dark:border-gray-700 dark:bg-slate-900 dark:text-gray-400 dark:hover:bg-slate-800 dark:hover:text-white dark:focus:ring-offset-gray-800"
-							href="/series/{item.id}"
-						>
-							{item.title}
-						</a>
-					{/each}
+					<ul
+						class="xs:grid-cols-1 xs:place-items-center grid grid-cols-1 gap-2 sm:grid-cols-1 sm:place-items-center md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4"
+					>
+						{#each searchResults as item}
+							<li
+								in:fly={{ y: 50, duration: 500, delay: 500 }}
+								out:fly={{ duration: 500 }}
+								data-sveltekit-noscroll
+								id={item.id}
+							>
+								<SearchCard title={item.title} url={`/series/${item.id}`} cover={item.cover} />
+							</li>
+						{/each}
+					</ul>
 				{:else}
 					<p class:hidden={query === ''} class="text-1xl font-ibx text-gray-600 dark:text-gray-400">
 						{errMsg}
