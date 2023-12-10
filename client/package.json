@@ -1,6 +1,6 @@
 {
 	"name": "esheeq-client",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Scrap dailymotion episodes links for a given series directly from esheeq",
 	"private": true,
 	"repository": {

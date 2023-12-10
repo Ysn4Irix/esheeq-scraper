@@ -151,7 +151,7 @@ const extractSeriesInfos = html => {
 		actors: []
 	}
 
-	infos.title = infoElement.find('h1').text()
+	infos.title = infoElement.find('h1 > a:nth-child(1)').text()
 	infos.id = infos.title.replace(/ /g, '-')
 	const cover = coverElement.find('div.img').attr('style')
 	infos.cover = cover.split('(')[1].replace(');', '')
