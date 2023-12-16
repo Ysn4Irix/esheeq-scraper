@@ -151,7 +151,7 @@ const extractSeriesInfos = html => {
 		actors: []
 	}
 
-	infos.title = infoElement.find('h1 > a:nth-child(1)').text()
+	infos.title = infoElement.find('h1').text()
 	infos.id = infos.title.replace(/ /g, '-')
 	const cover = coverElement.find('div.img').attr('style')
 	infos.cover = cover.split('(')[1].replace(');', '')
@@ -195,7 +195,7 @@ const extractDailymotionLinks = html => {
 		'body > div.secContainer.bg > div > div > div.getEmbed > div > span > a'
 	)
 	const url = element.attr('href')
-	const jsonData = url.split('=')[1].replace(/%3D/g, '')
+	const jsonData = url.split('=')[2].replace(/%3D/g, '')
 	const decodedData = base64.decode(jsonData)
 	const data = JSON.parse(decodedData)
 
