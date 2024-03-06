@@ -25,23 +25,19 @@
 <div class="mx-auto items-center px-4 py-4 sm:px-6 lg:py-4 xl:py-3">
 	{#if data.results.code !== 200}
 		<div class="mx-auto mb-5 max-w-2xl text-center lg:mb-7">
-			<h2 class="text-2xl font-bold dark:text-white md:text-4xl md:leading-tight">
-				Series not found
-			</h2>
+			<h2 class="text-2xl font-bold dark:text-white md:text-4xl md:leading-tight">Series not found</h2>
 		</div>
 	{:else}
 		<!-- Infos -->
 		<div class="mx-auto mb-5 max-w-2xl text-center lg:mb-7">
-			<h2
-				class="font-ibx text-3xl font-black text-red-500 dark:text-red-700 md:text-4xl md:leading-tight"
-			>
+			<h2 class="font-ibx text-3xl font-black text-red-500 dark:text-red-700 md:text-4xl md:leading-tight">
 				{data.results.data.title}
 			</h2>
-			<p class="font-ibx mt-3 text-lg text-gray-700 dark:text-gray-400">
+			<p class="mt-3 font-ibx text-lg text-gray-700 dark:text-gray-400">
 				{data.results.data.description}
 			</p>
 			<p class="mt-3 text-gray-600 dark:text-gray-400">
-				<span class="font-ibx text-md font-bold text-red-500">الممثلون :</span>
+				<span class="text-md font-ibx font-bold text-red-500">الممثلون :</span>
 				{#each data.results.data.actors as actor}
 					<span class="font-ibx text-gray-700 dark:text-gray-400">
 						,{actor}
@@ -53,7 +49,7 @@
 
 		<!-- Grid -->
 		<ul
-			class="xs:grid-cols-1 xs:place-items-center grid grid-cols-1 gap-6 sm:grid-cols-1 sm:place-items-center md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4"
+			class="grid grid-cols-1 gap-6 xs:grid-cols-1 xs:place-items-center sm:grid-cols-1 sm:place-items-center md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4"
 		>
 			{#each data.results.data.dailyLinks.slice(0, first) as item}
 				<li
@@ -81,12 +77,7 @@
 					on:click={() => (first += 4)}
 				>
 					Load more
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-						class="h-5 w-5"
-					>
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5">
 						<path
 							fill-rule="evenodd"
 							d="M10 3a.75.75 0 01.75.75v10.638l3.96-4.158a.75.75 0 111.08 1.04l-5.25 5.5a.75.75 0 01-1.08 0l-5.25-5.5a.75.75 0 111.08-1.04l3.96 4.158V3.75A.75.75 0 0110 3z"

@@ -10,6 +10,8 @@
 	let query = ''
 	/** @type {string} */
 	let errMsg = ''
+	/** @type {string} */
+	let loading = false
 
 	const handleSearch = async () => {
 		if (query.length < 3) {
@@ -17,14 +19,18 @@
 			errMsg = 'الرجاء إدخال 3 أحرف على الأقل'
 			return
 		}
+		loading = true
 		const response = await fetch(`${API_URL}/search/${query}`)
 		if (response.ok && response.status === 200) {
+			loading = false
 			const { data } = await response.json()
 			searchResults = data.results
 			if (searchResults.length === 0) {
+				loading = false
 				errMsg = 'لم يتم العثور على أي نتيجة'
 			}
 		} else if (response.status === 500) {
+			loading = false
 			searchResults = []
 			errMsg = 'Something went wrong, please try again later'
 		}
@@ -51,7 +57,7 @@
 				>
 					<div class="flex-[1_0_0%]">
 						<label for="query" class="block text-sm font-medium text-gray-700 dark:text-white">
-							<span class="font-ibx sr-only text-right">إبحث عن مسلسل</span>
+							<span class="sr-only text-right font-ibx">إبحث عن مسلسل</span>
 						</label>
 						<input
 							type="text"
@@ -59,7 +65,7 @@
 							id="query"
 							bind:value={query}
 							on:input={handleSearch}
-							class="font-ibx block w-full rounded-md border-transparent p-3 text-right focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-400"
+							class="block w-full rounded-md border-transparent p-3 text-right font-ibx focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-400"
 							placeholder="... إبحث عن مسلسل"
 						/>
 					</div>
@@ -117,10 +123,51 @@
 				</div>
 				<!-- End SVG Element -->
 			</div>
+
+			{#if loading}
+				<div class="mt-10">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						xmlns:xlink="http://www.w3.org/1999/xlink"
+						style="margin: auto; background: none; display: block; shape-rendering: auto;"
+						width="80px"
+						height="80px"
+						viewBox="0 0 100 100"
+						preserveAspectRatio="xMidYMid"
+					>
+						<circle
+							cx="50"
+							cy="50"
+							r="32"
+							stroke-width="8"
+							stroke="#b91c1c"
+							stroke-dasharray="50.26548245743669 50.26548245743669"
+							fill="none"
+							stroke-linecap="round"
+						>
+							<animateTransform
+								attributeName="transform"
+								type="rotate"
+								repeatCount="indefinite"
+								dur="1s"
+								keyTimes="0;1"
+								values="0 50 50;360 50 50"
+							/>
+						</circle>
+					</svg>
+				</div>
+			{/if}
+
+			{#if searchResults.length === 0 && query.length < 2 && !loading}
+				<p class:hidden={query === ''} class="text-1xl m-4 font-ibx text-gray-600 dark:text-gray-400">
+					{errMsg}
+				</p>
+			{/if}
+
 			<div class="mt-10 sm:mt-20">
 				{#if searchResults.length > 0}
 					<ul
-						class="xs:grid-cols-1 xs:place-items-center grid grid-cols-1 gap-2 sm:grid-cols-1 sm:place-items-center md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4"
+						class="grid grid-cols-1 gap-2 xs:grid-cols-1 xs:place-items-center sm:grid-cols-1 sm:place-items-center md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4"
 					>
 						{#each searchResults as item}
 							<li
@@ -133,10 +180,6 @@
 							</li>
 						{/each}
 					</ul>
-				{:else}
-					<p class:hidden={query === ''} class="text-1xl font-ibx text-gray-600 dark:text-gray-400">
-						{errMsg}
-					</p>
 				{/if}
 			</div>
 		</div>

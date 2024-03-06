@@ -1,5 +1,9 @@
 <script>
 	import '../app.postcss'
+	import { Toaster } from 'svelte-french-toast'
 </script>
 
-<slot />
+<main>
+	<slot />
+	<Toaster />
+</main>
