@@ -44,7 +44,7 @@
 
 					<button
 						on:click={handleCopy}
-						class="ml-[14.7rem] inline-flex items-center gap-1.5 rounded-full bg-purple-500 px-4 py-1.5 font-ibx text-xs font-semibold text-gray-200 transition-all duration-300 ease-in-out hover:bg-purple-600 dark:bg-purple-700"
+						class="ml-[14.2rem] inline-flex items-center gap-1.5 rounded-full bg-purple-500 px-4 py-1.5 font-ibx text-xs font-semibold text-gray-200 transition-all duration-300 ease-in-out hover:bg-purple-600 dark:bg-purple-700"
 					>
 						📋
 					</button>
