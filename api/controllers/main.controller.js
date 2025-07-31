@@ -6,8 +6,6 @@ const {
 	search,
 	fetchDailyLinks
 } = require('../helpers/utils')
-const { createWriteStream, unlink } = require('fs')
-const { join } = require('path')
 const { success, error } = require('../helpers/apiResponse')
 const logger = require('../helpers/logger')
 const { base_url } = require('../helpers/constants')

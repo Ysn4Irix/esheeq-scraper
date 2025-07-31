@@ -1,3 +1,3 @@
 module.exports = {
-	base_url: 'https://eshqy.net'
+	base_url: 'https://eceeq.org/'
 }
