@@ -192,15 +192,17 @@ const extractDailymotionLinks = html => {
 	const $ = cheerio.load(html)
 
 	const element = $(
-		'body > div.secContainer.bg > div > div > div.getEmbed > div > span > a'
+		'body > div.secContainer.bg > div > div > div.getEmbed > div > a'
 	)
 	const url = element.attr('href')
-	const jsonData = url.split('=')[3].replace(/%3D/g, '')
+	console.log('🚀 ~ extractDailymotionLinks ~ url:', url)
+
+	const jsonData = url.split('=')[2].replace(/%3D/g, '')
 	const decodedData = base64.decode(jsonData)
 	const data = JSON.parse(decodedData)
 
-	if (data.servers[2].id.includes('https://')) return data.servers[0].id
-	else return `https://www.dailymotion.com/video/${data.servers[0].id}`
+	if (data.servers[2].id.includes('https://')) return data.servers[1].id
+	else return `https://www.dailymotion.com/video/${data.servers[1].id}`
 }
 
 /**
