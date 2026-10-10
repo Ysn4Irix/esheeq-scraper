@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Glowing Cyan/Emerald Playhead Ambient Halo -->
+    <path
+        android:fillColor="#152EA043"
+        android:pathData="M 46,43 C 46,40.5 48.8,39 51,40.2 L 67.5,49.8 C 69.5,51 69.5,54 67.5,55.2 L 51,64.8 C 48.8,66 46,64.5 46,62 Z" />
+
+    <path
+        android:fillColor="#2838BDF8"
+        android:pathData="M 47.5,44.5 C 47.5,42.5 49.8,41.2 51.5,42.2 L 65.5,50.3 C 67.2,51.3 67.2,53.7 65.5,54.7 L 51.5,62.8 C 49.8,63.8 47.5,62.5 47.5,60.5 Z" />
+
+    <!-- Left Bracket [ -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 39,35 L 32,35 C 29.5,35 27.5,37 27.5,39.5 L 27.5,68.5 C 27.5,71 29.5,73 32,73 L 39,73" />
+
+    <!-- Right Bracket ] -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 69,35 L 76,35 C 78.5,35 80.5,37 80.5,39.5 L 80.5,68.5 C 80.5,71 78.5,73 76,73 L 69,73" />
+
+    <!-- Terminal Cursor Bar | -->
+    <path
+        android:strokeColor="#58A6FF"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="round"
+        android:pathData="M 41.5,47.5 L 41.5,60.5" />
+
+    <!-- Center Playhead Triangle ▶ -->
+    <path
+        android:fillColor="#2EA043"
+        android:strokeColor="#38BDF8"
+        android:strokeWidth="1.2"
+        android:strokeLineJoin="round"
+        android:pathData="M 49,46 C 49,44.2 51,43.1 52.5,44 L 64.5,51.2 C 66,52.1 66,54.4 64.5,55.3 L 52.5,62.5 C 51,63.4 49,62.3 49,60.5 Z" />
+
+    <!-- Live Status Green Dot Accent -->
+    <path
+        android:fillColor="#2EA043"
+        android:pathData="M 80,31 A 2.2,2.2 0 1,0 80,35.4 A 2.2,2.2 0 1,0 80,31 Z" />
+</vector>
