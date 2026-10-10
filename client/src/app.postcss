@@ -1,8 +1,195 @@
-/* Write your global styles here, in PostCSS syntax */
-@import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic&display=swap');
-
+/* Terminal utility global stylesheet */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+	--bg-app: #F6F8FA;
+	--bg-panel: #FFFFFF;
+	--bg-sub: #F0F2F5;
+	--border-main: #D0D7DE;
+	--border-sub: #E1E4E8;
+	--text-main: #1F2328;
+	--text-muted: #57606A;
+	--accent-blue: #0969DA;
+	--accent-blue-hover: #0550AE;
+	--accent-green: #1A7F37;
+	--accent-green-bg: rgba(26, 127, 55, 0.1);
+	--accent-red: #CF222E;
+}
+
+.dark {
+	--bg-app: #0D1117;
+	--bg-panel: #161B22;
+	--bg-sub: #21262D;
+	--border-main: #30363D;
+	--border-sub: #21262D;
+	--text-main: #F0F6FC;
+	--text-muted: #8B949E;
+	--accent-blue: #58A6FF;
+	--accent-blue-hover: #79C0FF;
+	--accent-green: #3FB950;
+	--accent-green-bg: rgba(46, 160, 67, 0.15);
+	--accent-red: #F85149;
+}
+
+@layer base {
+	body {
+		font-family: 'Tajawal', 'IBM Plex Sans Arabic', 'JetBrains Mono', system-ui, sans-serif;
+		background-color: var(--bg-app);
+		color: var(--text-main);
+		direction: rtl;
+		transition: background-color 0.2s ease, color 0.2s ease;
+	}
+
+	/* Clean scrollbars */
+	::-webkit-scrollbar {
+		width: 6px;
+		height: 6px;
+	}
+	::-webkit-scrollbar-track {
+		background: var(--bg-app);
+	}
+	::-webkit-scrollbar-thumb {
+		background: var(--border-main);
+		border-radius: 3px;
+	}
+	::-webkit-scrollbar-thumb:hover {
+		background: var(--accent-blue);
+	}
+}
+
+/* Light mode overrides for terminal utility tokens */
+html:not(.dark) {
+	background-color: #F6F8FA !important;
+}
+
+html:not(.dark) body {
+	background-color: #F6F8FA !important;
+	color: #1F2328 !important;
+}
+
+html:not(.dark) .bg-\[\#0D1117\] {
+	background-color: #F6F8FA !important;
+}
+
+html:not(.dark) .bg-\[\#0D1117\]\/90 {
+	background-color: rgba(246, 248, 250, 0.95) !important;
+}
+
+html:not(.dark) .bg-\[\#161B22\] {
+	background-color: #FFFFFF !important;
+}
+
+html:not(.dark) .bg-\[\#161B22\]\/95 {
+	background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+html:not(.dark) .bg-\[\#21262D\] {
+	background-color: #F0F2F5 !important;
+}
+
+html:not(.dark) .border-\[\#30363D\] {
+	border-color: #D0D7DE !important;
+}
+
+html:not(.dark) .border-\[\#21262D\] {
+	border-color: #E1E4E8 !important;
+}
+
+html:not(.dark) .text-\[\#F0F6FC\] {
+	color: #1F2328 !important;
+}
+
+html:not(.dark) .text-\[\#C9D1D9\] {
+	color: #24292F !important;
+}
+
+html:not(.dark) .text-\[\#8B949E\] {
+	color: #57606A !important;
+}
+
+html:not(.dark) .text-\[\#58A6FF\] {
+	color: #0969DA !important;
+}
+
+html:not(.dark) .hover\:text-\[\#79C0FF\]:hover {
+	color: #0550AE !important;
+}
+
+html:not(.dark) .hover\:border-\[\#58A6FF\]:hover {
+	border-color: #0969DA !important;
+}
+
+html:not(.dark) .text-\[\#3FB950\] {
+	color: #1A7F37 !important;
+}
+
+html:not(.dark) .bg-\[\#2EA043\]\/15 {
+	background-color: rgba(26, 127, 55, 0.1) !important;
+}
+
+html:not(.dark) .hover\:bg-\[\#2EA043\]:hover {
+	background-color: #1A7F37 !important;
+}
+
+html:not(.dark) .text-\[\#F85149\] {
+	color: #CF222E !important;
+}
+
+html:not(.dark) .shadow-2xl {
+	box-shadow: 0 4px 20px rgba(140, 149, 159, 0.2) !important;
+}
+
+html:not(.dark) .bg-\[\#0D1117\]\/60 {
+	background-color: #F0F2F5 !important;
+}
+
+html:not(.dark) .bg-\[\#0D1117\]\/30 {
+	background-color: #F8FAFC !important;
+}
+
+html:not(.dark) .bg-\[\#21262D\]\/40 {
+	background-color: #F0F2F5 !important;
+}
+
+html:not(.dark) .border-\[\#2EA043\]\/30 {
+	border-color: rgba(26, 127, 55, 0.3) !important;
+}
+
+html:not(.dark) .border-\[\#58A6FF\]\/40 {
+	border-color: rgba(9, 105, 218, 0.4) !important;
+}
+
+html:not(.dark) .shadow-xl {
+	box-shadow: 0 2px 12px rgba(140, 149, 159, 0.12) !important;
+}
+
+html:not(.dark) .hover\:bg-\[\#21262D\]\/60:hover {
+	background-color: rgba(240, 242, 245, 0.7) !important;
+}
+
+html:not(.dark) .hover\:bg-\[\#30363D\]:hover {
+	background-color: #E1E4E8 !important;
+}
+
+html:not(.dark) .divide-\[\#21262D\] > :not([hidden]) ~ :not([hidden]) {
+	border-color: #E1E4E8 !important;
+}
+
+html:not(.dark) input {
+	color: #1F2328 !important;
+}
+
+html:not(.dark) input::placeholder {
+	color: #8C959F !important;
+}
+
+@layer utilities {
+	.terminal-glow {
+		box-shadow: 0 0 15px rgba(88, 166, 255, 0.15);
+	}
+	.terminal-green-glow {
+		box-shadow: 0 0 10px rgba(46, 160, 67, 0.25);
+	}
+}

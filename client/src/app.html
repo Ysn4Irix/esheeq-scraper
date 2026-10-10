@@ -1,14 +1,26 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="ar" dir="rtl" class="h-full">
 	<head>
 		<meta charset="utf-8" />
 		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
-		<meta name="viewport" content="width=device-width" />
-		<script src="%sveltekit.assets%/switcher.js"></script>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+		<script>
+			try {
+				const theme = localStorage.getItem('theme') || 'dark';
+				if (theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+					document.documentElement.classList.add('dark');
+				} else {
+					document.documentElement.classList.remove('dark');
+				}
+			} catch (_) {}
+		</script>
 		%sveltekit.head%
 	</head>
 
-	<body data-sveltekit-preload-data="hover" class="bg-gray-100 font-varela dark:bg-slate-900">
+	<body data-sveltekit-preload-data="hover" class="min-h-full bg-[#0D1117] font-sans text-[#C9D1D9] antialiased selection:bg-[#58A6FF]/20 selection:text-[#58A6FF] dark:bg-[#0D1117] dark:text-[#C9D1D9]">
 		<div style="display: contents">%sveltekit.body%</div>
 		<script src="https://cdn.jsdelivr.net/npm/preline@1.8.0/dist/preline.min.js"></script>
 	</body>

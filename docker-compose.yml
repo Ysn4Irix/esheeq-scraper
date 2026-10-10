@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: esheeq-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+  api:
+    build:
+      context: .
+      dockerfile: ./api/Dockerfile
+    container_name: esheeq-api
+    environment:
+      - PORT=4000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+    ports:
+      - "4000:4000"
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  client:
+    build:
+      context: .
+      dockerfile: ./client/Dockerfile
+    container_name: esheeq-client
+    environment:
+      - HOST=0.0.0.0
+      - PORT=5173
+      - API_INTERNAL_URL=http://api:4000/api
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  redis_data:

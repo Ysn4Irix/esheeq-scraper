@@ -7,3 +7,11 @@
 /client/.svelte-kit
 /client/vite.config.js.timestamp-*
 /client/vite.config.ts.timestamp-*
+
+# Android
+/android/.gradle
+/android/local.properties
+/android/.idea
+/android/*/build
+/android/build
+/android/app/build

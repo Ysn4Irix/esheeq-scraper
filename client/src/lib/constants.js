@@ -1,1 +1,3 @@
-export const API_URL = 'https://esheeq-api.su.ysnirix.xyz/api'
+import { env } from '$env/dynamic/public'
+
+export const API_URL = env.PUBLIC_API_URL || '/api'

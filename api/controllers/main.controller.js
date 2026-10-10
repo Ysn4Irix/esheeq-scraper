@@ -4,7 +4,8 @@ const {
 	extractSeriesInfos,
 	extractEpisodesUrls,
 	search,
-	fetchDailyLinks
+	fetchDailyLinks,
+	fetchLatestEpisodes
 } = require('../helpers/utils')
 const { success, error } = require('../helpers/apiResponse')
 const logger = require('../helpers/logger')
@@ -20,9 +21,13 @@ module.exports = {
 	alive: (_, res) => {
 		try {
 			res.status(200).json(
-				success("🎉I'm alive", {
-					upTime: uptime(process.uptime())
-				})
+				success(
+					"🎉I'm alive",
+					{
+						upTime: uptime(process.uptime())
+					},
+					res.statusCode
+				)
 			)
 		} catch (err) {
 			logger.error(err.message)
@@ -101,5 +106,34 @@ module.exports = {
 				res.statusCode
 			)
 		)
+	},
+	/**
+	 * @desc fetch latest 5 episodes from qeseh.net/son-bolumler
+	 * @param {import('@types/express').Request} req
+	 * @param {import('@types/express').Response} res
+	 * @returns {object} object
+	 */
+	latest: async (req, res) => {
+		try {
+			const count = parseInt(req.query.count, 10) || 5
+			const episodes = await fetchLatestEpisodes(count)
+			res.status(200).json(
+				success(
+					'✅ Done',
+					{
+						episodes
+					},
+					res.statusCode
+				)
+			)
+		} catch (err) {
+			logger.error(`Error in latest controller: ${err.message}`)
+			res.status(500).json(
+				error(
+					'Failed to retrieve latest episodes',
+					res.statusCode
+				)
+			)
+		}
 	}
 }

@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">قصة عشق</string>
+    <string name="search_placeholder">ابحث عن اسم المسلسل (مثال: الحفرة، طائر الرفراف)...</string>
+    <string name="latest_episodes">قائمة الانتظار // آخر 5 حلقات مضافة</string>
+    <string name="series_index">فهرس المسلسلات // تفاصيل العمل</string>
+    <string name="watch">مشاهدة</string>
+    <string name="copy">نسخ</string>
+    <string name="copy_all">نسخ جميع الروابط دفعة واحدة</string>
+    <string name="completed">● مكتمل</string>
+    <string name="episodes_count">%1$d حلقة</string>
+    <string name="quality_1080p">1080p FHD</string>
+    <string name="live_stream">بث حي // متصل</string>
+    <string name="copied_success">تم نسخ الرابط بنجاح للحافظة</string>
+    <string name="copied_all_success">تم نسخ جميع الروابط بنجاح</string>
+    <string name="no_results">لم يتم العثور على أية نتائج مطابقة للبحث</string>
+    <string name="network_error">تعذر الاتصال بالخادم، يرجى التحقق من الشبكة</string>
+</resources>

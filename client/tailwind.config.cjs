@@ -12,9 +12,23 @@ const config = {
 			xl: '1440px'
 		},
 		extend: {
+			colors: {
+				terminal: {
+					bg: '#0D1117',
+					panel: '#161B22',
+					sub: '#21262D',
+					border: '#30363D',
+					blue: '#58A6FF',
+					green: '#2EA043',
+					emerald: '#3FB950',
+					muted: '#8B949E',
+					text: '#F0F6FC'
+				}
+			},
 			fontFamily: {
-				varela: ['Varela Round', 'sans-serif'],
-				pacifico: ['Pacifico', 'sans-serif'],
+				mono: ['JetBrains Mono', 'monospace'],
+				sans: ['Tajawal', 'IBM Plex Sans Arabic', 'system-ui', 'sans-serif'],
+				tajawal: ['Tajawal', 'sans-serif'],
 				ibx: ['IBM Plex Sans Arabic', 'sans-serif']
 			}
 		}

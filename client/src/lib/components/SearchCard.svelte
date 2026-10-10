@@ -7,22 +7,37 @@
 	export let title = ''
 </script>
 
-<!-- Card -->
-<a data-sveltekit-preload-data="hover" class="group relative block" href={url}>
-	<div
-		class="relative h-[410px] w-[280px] flex-shrink-0 overflow-hidden rounded-xl shadow-lg before:absolute before:inset-x-0 before:z-[1] before:h-full before:w-full before:bg-gradient-to-t before:from-gray-900/[.7]"
-	>
-		<img
-			class="absolute left-0 top-0 h-full w-full object-fill transition-all duration-300 ease-in-out group-hover:scale-110"
-			src={cover}
-			alt={title}
-		/>
+<a
+	data-sveltekit-preload-data="hover"
+	href={url}
+	class="group block overflow-hidden rounded-lg border border-[#30363D] bg-[#161B22] transition-all hover:border-[#58A6FF] hover:shadow-[0_0_15px_rgba(88,166,255,0.12)] text-xs"
+>
+	<div class="relative aspect-[16/10] w-full overflow-hidden bg-[#0D1117]">
+		{#if cover}
+			<img
+				class="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+				src={cover}
+				alt={title}
+				loading="lazy"
+			/>
+		{:else}
+			<div class="flex h-full w-full items-center justify-center text-[#8B949E] text-[11px]">
+				[لا يوجد غلاف]
+			</div>
+		{/if}
+		<div class="absolute inset-0 bg-gradient-to-t from-[#161B22] via-transparent to-transparent opacity-80"></div>
 	</div>
 
-	<div class="absolute inset-x-0 bottom-0 z-10">
-		<div class="flex h-full flex-col p-4 sm:p-6">
-			<p class="font-ibx mt-2 text-sm text-white/[.8]">{title}</p>
+	<div class="p-3">
+		<h3 class="font-sans text-sm font-bold text-[#F0F6FC] group-hover:text-[#58A6FF] transition line-clamp-1">
+			{title}
+		</h3>
+		<div class="mt-2 flex items-center justify-between text-[11px] text-[#8B949E] border-t border-[#21262D] pt-2">
+			<span>مسلسل</span>
+			<span class="text-[#58A6FF] group-hover:underline font-semibold flex items-center gap-1">
+				<span>عرض الحلقات</span>
+				<span>←</span>
+			</span>
 		</div>
 	</div>
 </a>
-<!-- End Card -->

@@ -1,4 +1,4 @@
-FROM --platform=arm64 node:18-alpine
+FROM node:18-alpine
 ARG REDIS_PORT=${REDIS_PORT}
 ENV REDIS_PORT=${REDIS_PORT}
 ARG REDIS_HOST=${REDIS_HOST}

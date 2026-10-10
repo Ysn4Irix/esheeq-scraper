@@ -1,7 +1,7 @@
 import { API_URL } from '$lib/constants.js'
 
 /** @type {import('./$types').PageServerLoad} */
-export const load = async ({ params }) => {
+export const load = async ({ fetch, params }) => {
 	const { id } = params
 
 	const res = await fetch(`${API_URL}/scrape/${id}`)

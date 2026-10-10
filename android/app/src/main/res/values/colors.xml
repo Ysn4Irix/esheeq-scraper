@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="terminal_bg">#0D1117</color>
+    <color name="terminal_surface">#161B22</color>
+    <color name="terminal_border">#21262D</color>
+    <color name="terminal_blue">#58A6FF</color>
+    <color name="terminal_emerald">#2EA043</color>
+    <color name="terminal_text_primary">#E6EDF3</color>
+    <color name="terminal_text_muted">#8B949E</color>
+</resources>

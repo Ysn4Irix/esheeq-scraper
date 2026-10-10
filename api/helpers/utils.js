@@ -60,32 +60,56 @@ const fetchEpisodesHtml = async (seriesId, url) => {
 
 /**
  *
- * @param {string} key redis key
  * @param {string} seriesId series id
  * @param {array<string>} episodesUrls array of episodes urls
+ * @param {number} batchSize batch concurrency size
  * @returns {Promise<array>} array of daily links
  */
-const fetchDailyLinks = async (seriesId, episodesUrls) => {
+const fetchDailyLinks = async (seriesId, episodesUrls, batchSize = 5) => {
 	const dailyLinksKey = `dailyLinks:${seriesId}`
 
 	let dailyLinks = []
 	if (await redisClient.exists(dailyLinksKey)) {
 		logger.info(`Cache hit for ${dailyLinksKey}`)
-		dailyLinks = JSON.parse(await redisClient.get(dailyLinksKey))
-	} else {
-		logger.info(`Cache miss for ${dailyLinksKey}`)
-		for (let i = 0; i < episodesUrls.length; i++) {
-			const html = await fetchEpisodesHtml(seriesId, episodesUrls[i])
-			if (html) {
-				const dailyLink = extractDailymotionLinks(html)
-				dailyLinks.push({
-					episode: `${i + 1}`,
-					link: dailyLink
-				})
-			}
+		try {
+			dailyLinks = JSON.parse(await redisClient.get(dailyLinksKey))
+			return dailyLinks
+		} catch (err) {
+			logger.error(`Error parsing cached dailyLinks: ${err.message}`)
 		}
 	}
-	redisClient.setEx(dailyLinksKey, 86400, JSON.stringify(dailyLinks))
+
+	logger.info(
+		`Cache miss for ${dailyLinksKey} - fetching ${episodesUrls.length} episodes with batch size ${batchSize}`
+	)
+	let hasFailures = false
+
+	for (let i = 0; i < episodesUrls.length; i += batchSize) {
+		const chunk = episodesUrls.slice(i, i + batchSize)
+		const chunkResults = await Promise.all(
+			chunk.map(async (url, idx) => {
+				const episodeNum = `${i + idx + 1}`
+				try {
+					const html = await fetchEpisodesHtml(seriesId, url)
+					if (html) {
+						const dailyLink = extractDailymotionLinks(html)
+						if (dailyLink) {
+							return { episode: episodeNum, link: dailyLink }
+						}
+					}
+				} catch (err) {
+					logger.error(`Error resolving episode ${episodeNum}: ${err.message}`)
+				}
+				hasFailures = true
+				return { episode: episodeNum, link: null, retryable: true }
+			})
+		)
+		dailyLinks.push(...chunkResults)
+	}
+
+	// 5-minute TTL on partial failures, 24-hour TTL on complete success
+	const ttl = hasFailures ? 300 : 86400
+	await redisClient.setEx(dailyLinksKey, ttl, JSON.stringify(dailyLinks))
 	return dailyLinks
 }
 
@@ -114,13 +138,14 @@ const search = async query => {
 	element.each((i, el) => {
 		const title = $(el).find('div.title').text().trim()
 		if (!title.includes('فيلم')) {
-			const url = decodeURI($(el).find('a').attr('href'))
-			const id = url.split('/')[4]
-			const cover = $(el)
-				.find('div.imgBg')
-				.attr('style')
-				.split('(')[1]
-				.replace(');', '')
+			const href = $(el).find('a').attr('href')
+			const url = href ? decodeURI(href) : ''
+			const id = url ? url.split('/')[4] || '' : ''
+			const imgStyle = $(el).find('div.imgBg').attr('style') || ''
+			const cover =
+				imgStyle.includes('(') && imgStyle.includes(')')
+					? imgStyle.split('(')[1].split(')')[0].replace(/['"]/g, '')
+					: ''
 			results.push({
 				id,
 				title,
@@ -151,14 +176,19 @@ const extractSeriesInfos = html => {
 		actors: []
 	}
 
-	infos.title = infoElement.find('h1').text()
+	infos.title = infoElement.find('h1').text().trim()
 	infos.id = infos.title.replace(/ /g, '-')
-	const cover = coverElement.find('div.img').attr('style')
-	infos.cover = cover.split('(')[1].replace(');', '')
-	infos.description = infoElement.find('div.story').text()
+	const coverStyle = coverElement.find('div.img').attr('style') || ''
+	infos.cover =
+		coverStyle.includes('(') && coverStyle.includes(')')
+			? coverStyle.split('(')[1].split(')')[0].replace(/['"]/g, '')
+			: ''
+	infos.description = infoElement.find('div.story').text().trim()
 	infoElement.find('div.tax > a').each((i, el) => {
 		const actor = $(el).attr('title')
-		infos.actors.push(actor)
+		if (actor) {
+			infos.actors.push(actor)
+		}
 	})
 
 	return infos
@@ -184,25 +214,106 @@ const extractEpisodesUrls = html => {
 }
 
 /**
- * @desc extract dailymotion links from the episodes pages
+ * @desc extract dailymotion and direct streaming links from the episodes pages
  * @param {string} html
- * @returns {string} dailymotion link
+ * @returns {string|null} streaming link
  */
 const extractDailymotionLinks = html => {
-	const $ = cheerio.load(html)
+	try {
+		const $ = cheerio.load(html)
 
-	const element = $(
-		'body > div.secContainer.bg > div > div > div.getEmbed > div > a'
-	)
-	const url = element.attr('href')
-	console.log('🚀 ~ extractDailymotionLinks ~ url:', url)
+		// Direct iframe check
+		const iframeSrc = $(
+			'iframe[src*="dailymotion.com"], iframe[src*="ok.ru"]'
+		).attr('src')
+		if (iframeSrc) return iframeSrc
 
-	const jsonData = url.split('=')[2].replace(/%3D/g, '')
-	const decodedData = base64.decode(jsonData)
-	const data = JSON.parse(decodedData)
+		const element = $(
+			'a[href*="watch?post="], body > div.secContainer.bg > div > div > div.getEmbed > div > a, .modern-player-container a'
+		)
+		const url = element.attr('href')
+		if (!url) return null
 
-	if (data.servers[2].id.includes('https://')) return data.servers[1].id
-	else return `https://www.dailymotion.com/video/${data.servers[1].id}`
+		let jsonData = ''
+		if (url.includes('post=')) {
+			jsonData = url.split('post=')[1].split('&')[0]
+		} else if (url.includes('=')) {
+			const parts = url.split('=')
+			jsonData = parts[parts.length - 1]
+		}
+		if (!jsonData) return null
+
+		jsonData = decodeURIComponent(jsonData).replace(/%3D/g, '')
+		const decodedData = Buffer.from(jsonData, 'base64').toString('utf-8')
+		const data = JSON.parse(decodedData)
+
+		if (!data) return null
+
+		// Note: data.codeDaily is a static placeholder ("x6mp5r") in the upstream WordPress theme.
+		// Never resolve codeDaily if it equals "x6mp5r".
+		if (data.codeDaily && data.codeDaily !== 'x6mp5r') {
+			return data.codeDaily.startsWith('http')
+				? data.codeDaily
+				: `https://www.dailymotion.com/video/${data.codeDaily}`
+		}
+
+		if (Array.isArray(data.servers)) {
+			// 1. Prioritize Dailymotion server
+			const dailyServer = data.servers.find(
+				s => s && s.name && s.name.toLowerCase().includes('dailymotion')
+			)
+			if (dailyServer && dailyServer.id) {
+				const id = dailyServer.id.trim()
+				return id.startsWith('http')
+					? id
+					: `https://www.dailymotion.com/video/${id}`
+			}
+
+			// 2. Direct URLs (e.g. mail.ru express link)
+			const directServer = data.servers.find(
+				s => s && s.id && s.id.startsWith('http')
+			)
+			if (directServer) {
+				return directServer.id.trim()
+			}
+
+			// 3. OK.ru server
+			const okServer = data.servers.find(
+				s => s && s.name && s.name.toLowerCase() === 'ok'
+			)
+			if (okServer && okServer.id) {
+				return `https://ok.ru/video/${okServer.id.trim()}`
+			}
+
+			// 4. Arab HD / estream / Red HD video server
+			const arabOrStream = data.servers.find(
+				s =>
+					s &&
+					s.id &&
+					(s.name.toLowerCase().includes('arab') ||
+						s.name.toLowerCase().includes('estream') ||
+						s.name.toLowerCase().includes('red'))
+			)
+			if (arabOrStream && arabOrStream.id) {
+				return `https://vidshar.org/${arabOrStream.id.trim()}`
+			}
+
+			// 5. Fallback across any available server entry
+			for (const server of data.servers) {
+				if (server && server.id) {
+					const id = server.id.trim()
+					return id.startsWith('http')
+						? id
+						: `https://vidshar.org/${id}`
+				}
+			}
+		}
+
+		return null
+	} catch (err) {
+		logger.error(`Error extracting dailymotion link: ${err.message}`)
+		return null
+	}
 }
 
 /**
@@ -236,10 +347,100 @@ const uptime = time => {
  * @returns {string} converted url
  */
 const convertUrl = url => {
-	const urlParam = url.split('=')[1].replace(/%3D/g, '')
-	const decodedUrl = decodeURI(base64.decode(urlParam))
-	const noLastSlashUrl = decodedUrl.slice(0, -1)
-	return noLastSlashUrl
+	try {
+		if (!url || !url.includes('=')) return url || ''
+		const urlParam = url.split('=')[1].replace(/%3D/g, '')
+		const decodedUrl = decodeURI(base64.decode(urlParam))
+		return decodedUrl.endsWith('/') ? decodedUrl.slice(0, -1) : decodedUrl
+	} catch (err) {
+		logger.error(`Error converting url ${url}: ${err.message}`)
+		return url
+	}
+}
+
+/**
+ * @desc fetch latest episodes from qeseh.net/son-bolumler
+ * @param {number} count number of episodes to fetch
+ * @returns {Promise<Array>}
+ */
+const fetchLatestEpisodes = async (count = 5) => {
+	const cacheKey = `latest:episodes:${count}`
+	if (await redisClient.exists(cacheKey)) {
+		logger.info(`Cache hit for ${cacheKey}`)
+		try {
+			return JSON.parse(await redisClient.get(cacheKey))
+		} catch (err) {
+			logger.error(`Error parsing cached latest episodes: ${err.message}`)
+		}
+	}
+
+	logger.info(`Cache miss for ${cacheKey} - scraping qeseh.net/son-bolumler`)
+	try {
+		const res = await axios.get('https://qeseh.net/son-bolumler/', {
+			headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+			timeout: 8000
+		})
+		const $ = cheerio.load(res.data)
+		const items = []
+
+		$('#load-post-episodes article.post')
+			.slice(0, count)
+			.each((i, el) => {
+				const a = $(el).find('a').first()
+				const href = a.attr('href') || ''
+				const rawTitle = a.attr('title') || $(el).find('.title').text().trim()
+				const title = rawTitle.replace(/\s*-\s*قصة عشق\s*$/, '').trim()
+				const epMatch = title.match(/الحلقة\s*(\d+)/)
+				const epNum =
+					$(el).find('.episodeNum span:last-child').text().trim() ||
+					(epMatch ? epMatch[1] : '')
+				const seriesTitle = title
+					.replace(/الحلقة\s*\d+.*$/, '')
+					.replace(/مسلسل\s*/, '')
+					.trim()
+				const imgBg = $(el).find('.imgBg').attr('style') || ''
+				let thumb = ''
+				if (imgBg.includes('url(')) {
+					thumb = imgBg.split('url(')[1].split(')')[0].replace(/['"]/g, '')
+				} else {
+					thumb = $(el).find('img').attr('src') || ''
+				}
+
+				items.push({
+					id: href.split('/')[4] || `ep-${i + 1}`,
+					title,
+					seriesTitle,
+					episode: epNum,
+					url: href,
+					thumb
+				})
+			})
+
+		// Resolve streaming links in parallel
+		const resolved = await Promise.all(
+			items.map(async item => {
+				try {
+					const epRes = await axios.get(item.url, {
+						headers: {
+							'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+						},
+						timeout: 5000
+					})
+					const streamLink = extractDailymotionLinks(epRes.data)
+					return { ...item, streamLink }
+				} catch (err) {
+					return { ...item, streamLink: null }
+				}
+			})
+		)
+
+		// Cache for 10 minutes (600s)
+		await redisClient.setEx(cacheKey, 600, JSON.stringify(resolved))
+		return resolved
+	} catch (err) {
+		logger.error(`Error fetching latest episodes: ${err.message}`)
+		return []
+	}
 }
 
 module.exports = {
@@ -249,6 +450,7 @@ module.exports = {
 	extractSeriesInfos,
 	extractEpisodesUrls,
 	extractDailymotionLinks,
+	fetchLatestEpisodes,
 	search,
 	uptime
 }
