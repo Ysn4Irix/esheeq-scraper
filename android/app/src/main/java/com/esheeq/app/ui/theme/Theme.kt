@@ -40,7 +40,9 @@ fun EsheeqTheme(
         SideEffect {
             val window = (view.context as? Activity)?.window
             if (window != null) {
+                @Suppress("DEPRECATION")
                 window.statusBarColor = TerminalBg.toArgb()
+                @Suppress("DEPRECATION")
                 window.navigationBarColor = TerminalBg.toArgb()
                 val controller = WindowCompat.getInsetsController(window, view)
                 controller.isAppearanceLightStatusBars = false
