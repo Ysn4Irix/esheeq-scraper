@@ -11,6 +11,7 @@ import android.os.Build
 import android.util.Rational
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -34,6 +35,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -47,6 +49,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,6 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.delay
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -83,16 +87,57 @@ enum class PlayerEngine {
 }
 
 /**
+ * Extracts video ID from any Dailymotion URL format.
+ */
+fun extractDailymotionId(rawUrl: String): String? {
+    val trimmed = rawUrl.trim()
+    val patterns = listOf(
+        Regex("""dailymotion\.com/(?:video|embed/video)/([a-zA-Z0-9]+)"""),
+        Regex("""dai\.ly/([a-zA-Z0-9]+)"""),
+        Regex("""dailymotion\.com/hub/[^#]+#video=([a-zA-Z0-9]+)""")
+    )
+    for (pattern in patterns) {
+        val match = pattern.find(trimmed)
+        if (match != null) return match.groupValues[1]
+    }
+    return null
+}
+
+/**
+ * Builds responsive HTML embedding Dailymotion iframe with proper referrer origin.
+ */
+fun buildDailymotionHtml(videoId: String): String {
+    return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            html, body { width: 100%; height: 100%; background-color: #000; overflow: hidden; }
+            iframe { width: 100%; height: 100%; border: 0; display: block; }
+          </style>
+        </head>
+        <body>
+          <iframe
+            src="https://www.dailymotion.com/embed/video/$videoId?autoplay=1&ui-logo=0&ui-start-screen-info=0"
+            allow="autoplay; fullscreen; picture-in-picture; web-share"
+            allowfullscreen>
+          </iframe>
+        </body>
+        </html>
+    """.trimIndent()
+}
+
+/**
  * Transforms standard streaming page links into clean, ad-resilient iframe embeds.
  */
 fun formatStreamEmbedUrl(rawUrl: String): String {
     val trimmed = rawUrl.trim()
-    
-    // Dailymotion: convert https://www.dailymotion.com/video/ID into official embed
-    val dmMatch = Regex("""dailymotion\.com/(?:video|embed/video)/([a-zA-Z0-9]+)""").find(trimmed)
-    if (dmMatch != null) {
-        val id = dmMatch.groupValues[1]
-        return "https://www.dailymotion.com/embed/video/$id?autoplay=1&ui-logo=0&ui-start-screen-info=0"
+
+    val dmId = extractDailymotionId(trimmed)
+    if (dmId != null) {
+        return "https://www.dailymotion.com/embed/video/$dmId?autoplay=1&ui-logo=0&ui-start-screen-info=0"
     }
 
     // OK.ru: convert video URL to embed
@@ -211,6 +256,14 @@ fun PlayerScreen(
                                         ViewGroup.LayoutParams.MATCH_PARENT
                                     )
                                     setBackgroundColor(AndroidColor.BLACK)
+                                    setLayerType(View.LAYER_TYPE_HARDWARE, null)
+
+                                    // Enable cookies & 3rd party cookies required by video CDN sessions
+                                    val currentWebView = this
+                                    CookieManager.getInstance().apply {
+                                        setAcceptCookie(true)
+                                        setAcceptThirdPartyCookies(currentWebView, true)
+                                    }
 
                                     settings.apply {
                                         javaScriptEnabled = true
@@ -236,26 +289,29 @@ fun PlayerScreen(
                                             view: WebView?,
                                             request: WebResourceRequest?
                                         ): Boolean {
-                                            val reqUrl = request?.url?.toString() ?: return false
-                                            val scheme = request.url?.scheme?.lowercase() ?: ""
+                                            val reqUrl = request?.url ?: return false
+                                            val scheme = reqUrl.scheme?.lowercase() ?: ""
                                             if (scheme != "http" && scheme != "https") {
                                                 // Block intent://, market://, app:// redirects from interrupting playback
                                                 return true
                                             }
-                                            val host = request.url?.host?.lowercase() ?: ""
-                                            // Allow video stream and embed CDN hosts
-                                            if (host.contains("dailymotion.com") ||
-                                                host.contains("dmcdn.net") ||
-                                                host.contains("mail.ru") ||
-                                                host.contains("ok.ru") ||
-                                                host.contains("vidshar") ||
-                                                host.contains("qeseh") ||
-                                                host.contains("qesen")
-                                            ) {
-                                                return false
+                                            // Only intercept main frame navigation away from player
+                                            if (request.isForMainFrame) {
+                                                val host = reqUrl.host?.lowercase() ?: ""
+                                                if (host.contains("dailymotion.com") ||
+                                                    host.contains("dmcdn.net") ||
+                                                    host.contains("dmxleo.com") ||
+                                                    host.contains("mail.ru") ||
+                                                    host.contains("ok.ru") ||
+                                                    host.contains("vidshar") ||
+                                                    host.contains("qeseh") ||
+                                                    host.contains("qesen")
+                                                ) {
+                                                    return false
+                                                }
+                                                return true
                                             }
-                                            // Intercept ad popups and prevent navigating away
-                                            return true
+                                            return false
                                         }
                                     }
 
@@ -274,7 +330,13 @@ fun PlayerScreen(
                                         }
                                     }
 
-                                    loadUrl(effectiveEmbedUrl)
+                                    val dmId = extractDailymotionId(videoUrl)
+                                    if (dmId != null) {
+                                        val html = buildDailymotionHtml(dmId)
+                                        loadDataWithBaseURL("https://www.dailymotion.com/", html, "text/html", "UTF-8", null)
+                                    } else {
+                                        loadUrl(effectiveEmbedUrl)
+                                    }
                                 }
                             },
                             modifier = Modifier.fillMaxSize()
@@ -299,95 +361,59 @@ fun PlayerScreen(
             }
         }
 
-        // Top Overlay Header Bar
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopCenter)
-                .background(TerminalBg.copy(alpha = 0.90f))
-                .statusBarsPadding()
-                .border(1.dp, TerminalBorder.copy(alpha = 0.6f), RoundedCornerShape(0.dp))
-                .padding(horizontal = 12.dp, vertical = 8.dp)
-        ) {
+        // Minimal floating controls: auto-hides after 3.5s so top bar is completely disabled during playback
+        var showFloatingControls by remember { mutableStateOf(true) }
+        LaunchedEffect(Unit) {
+            delay(3500)
+            showFloatingControls = false
+        }
+
+        if (showFloatingControls) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
+                IconButton(
+                    onClick = onBackClick,
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(Color(0x80000000))
                 ) {
-                    IconButton(
-                        onClick = onBackClick,
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "الرجوع",
-                            tint = TerminalBlue
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(6.dp))
-
-                    Text(
-                        text = title,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TerminalTextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "الرجوع",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // Engine Switcher
-                    Box(
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && activity != null) {
+                    IconButton(
+                        onClick = {
+                            try {
+                                val pipParams = PictureInPictureParams.Builder()
+                                    .setAspectRatio(Rational(16, 9))
+                                    .build()
+                                activity.enterPictureInPictureMode(pipParams)
+                            } catch (_: Exception) {}
+                        },
                         modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(TerminalBlueDim)
-                            .border(1.dp, TerminalBlue.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
-                            .clickable {
-                                currentEngine = if (currentEngine == PlayerEngine.EXO_PLAYER) {
-                                    PlayerEngine.WEB_EMBED
-                                } else {
-                                    PlayerEngine.EXO_PLAYER
-                                }
-                            }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(Color(0x80000000))
                     ) {
-                        Text(
-                            text = if (currentEngine == PlayerEngine.EXO_PLAYER) "محرك: أصلي" else "محرك: مضمن",
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TerminalBlue
+                        Icon(
+                            imageVector = Icons.Default.PictureInPictureAlt,
+                            contentDescription = "صورة داخل صورة",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
                         )
-                    }
-
-                    // Picture in Picture (PiP) Button
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && activity != null) {
-                        IconButton(
-                            onClick = {
-                                try {
-                                    val pipParams = PictureInPictureParams.Builder()
-                                        .setAspectRatio(Rational(16, 9))
-                                        .build()
-                                    activity.enterPictureInPictureMode(pipParams)
-                                } catch (_: Exception) {}
-                            },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PictureInPictureAlt,
-                                contentDescription = "صورة داخل صورة",
-                                tint = TerminalEmerald
-                            )
-                        }
                     }
                 }
             }

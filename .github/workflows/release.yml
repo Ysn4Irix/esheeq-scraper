@@ -39,7 +39,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Determine Version Tag
+      - name: Determine Version & Version Code
         id: version
         shell: bash
         run: |
@@ -48,10 +48,19 @@ jobs:
           elif [[ -n "${{ inputs.tag_name }}" ]]; then
             TAG="${{ inputs.tag_name }}"
           else
-            TAG="v1.0.0-$(date +'%Y%m%d%H%M')"
+            TAG="v1.0.1"
           fi
+          # Strip leading 'v'
+          VERSION_NAME="${TAG#v}"
+          
+          # Maintain consistent increasing versionCode using git commit count
+          COMMIT_COUNT=$(git rev-list --count HEAD 2>/dev/null || echo "10")
+          VERSION_CODE=$((COMMIT_COUNT + 10))
+          
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "Computed release tag: $TAG"
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+          echo "Release tag: $TAG, versionName: $VERSION_NAME, versionCode: $VERSION_CODE"
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -72,18 +81,21 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
 
-      - name: Build Android APK
+      - name: Build Android Release APK
+        shell: bash
         run: |
           cd android
-          ./gradlew :app:assembleDebug --no-daemon
+          ./gradlew :app:assembleRelease \
+            -PversionName="${{ steps.version.outputs.version_name }}" \
+            -PversionCode="${{ steps.version.outputs.version_code }}" \
+            --no-daemon
 
-      - name: Prepare Release Artifacts
+      - name: Prepare Release Artifact
         shell: bash
         run: |
           TAG="${{ steps.version.outputs.tag }}"
-          cp android/app/build/outputs/apk/debug/app-debug.apk "./esheeq-${TAG}.apk"
-          git archive --format=zip HEAD -o "./esheeq-source-${TAG}.zip"
-          ls -la esheeq-*
+          cp android/app/build/outputs/apk/release/app-release.apk "./esheeq-${TAG}.apk"
+          ls -la esheeq-*.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -97,4 +109,3 @@ jobs:
           generate_release_notes: true
           files: |
             ./esheeq-*.apk
-            ./esheeq-source-*.zip
