@@ -5,7 +5,7 @@ export const GET = async ({ params, url, request }) => {
 	const backendBase =
 		env.API_INTERNAL_URL ||
 		process.env.API_INTERNAL_URL ||
-		'http://localhost:4000/api'
+		'https://esheeq.ysnirix.xyz/api'
 
 	const targetUrl = `${backendBase.replace(/\/$/, '')}/${params.path}${url.search}`
 

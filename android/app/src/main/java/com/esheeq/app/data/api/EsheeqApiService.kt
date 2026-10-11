@@ -34,7 +34,7 @@ interface EsheeqApiService {
 object ApiClient {
     private const val PREFS_NAME = "esheeq_prefs"
     private const val KEY_BASE_URL = "base_url"
-    private const val DEFAULT_BASE_URL = "http://10.0.2.2:4000/api/"
+    private const val DEFAULT_BASE_URL = "https://esheeq.ysnirix.xyz/api/"
 
     @Volatile
     private var baseUrl: String = DEFAULT_BASE_URL

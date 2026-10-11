@@ -338,6 +338,20 @@ private fun ServerSettingsDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    // Production Cloud preset
+                    Box(
+                        modifier = Modifier
+                            .weight(1.2f)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(TerminalEmeraldDim)
+                            .border(1.dp, TerminalEmerald.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                            .clickable { urlInput = "https://esheeq.ysnirix.xyz/api/" }
+                            .padding(vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("الرسمي (Cloud)", fontSize = 11.sp, color = TerminalEmerald, fontWeight = FontWeight.Bold)
+                    }
+
                     // Emulator preset
                     Box(
                         modifier = Modifier
@@ -352,7 +366,7 @@ private fun ServerSettingsDialog(
                         Text("محاكي", fontSize = 11.sp, color = TerminalBlue)
                     }
 
-                    // LAN IP preset
+                    // Local LAN preset
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -363,21 +377,7 @@ private fun ServerSettingsDialog(
                             .padding(vertical = 6.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Wi-Fi شبكة", fontSize = 11.sp, color = TerminalEmerald)
-                    }
-
-                    // USB ADB preset
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(TerminalSurfaceElevated)
-                            .border(1.dp, TerminalBorder, RoundedCornerShape(4.dp))
-                            .clickable { urlInput = "http://localhost:4000/api/" }
-                            .padding(vertical = 6.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("USB/adb", fontSize = 11.sp, color = TerminalTextPrimary)
+                        Text("محلي (LAN)", fontSize = 11.sp, color = TerminalTextPrimary)
                     }
                 }
             }
