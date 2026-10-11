@@ -32,8 +32,6 @@ interface EsheeqApiService {
 }
 
 object ApiClient {
-    private const val PREFS_NAME = "esheeq_prefs"
-    private const val KEY_BASE_URL = "base_url"
     private const val DEFAULT_BASE_URL = "https://esheeq.ysnirix.xyz/api/"
 
     @Volatile
@@ -61,22 +59,29 @@ object ApiClient {
     }
 
     fun init(context: android.content.Context) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
-        val saved = prefs.getString(KEY_BASE_URL, DEFAULT_BASE_URL) ?: DEFAULT_BASE_URL
-        setCustomBaseUrl(context, saved, saveToPrefs = false)
+        val configuredUrl = loadConfigUrl(context)
+        setBaseUrl(configuredUrl)
     }
 
-    fun setCustomBaseUrl(context: android.content.Context? = null, newUrl: String, saveToPrefs: Boolean = true) {
+    private fun loadConfigUrl(context: android.content.Context): String {
+        return try {
+            context.assets.open("config.json").use { stream ->
+                val json = stream.bufferedReader().use { it.readText() }
+                val jsonObj = org.json.JSONObject(json)
+                val url = jsonObj.optString("api_base_url", DEFAULT_BASE_URL).trim()
+                if (url.isNotEmpty()) url else DEFAULT_BASE_URL
+            }
+        } catch (_: Exception) {
+            DEFAULT_BASE_URL
+        }
+    }
+
+    fun setBaseUrl(newUrl: String) {
         val trimmed = newUrl.trim()
         val formatted = if (trimmed.endsWith("/")) trimmed else "$trimmed/"
         baseUrl = formatted
         retrofit = buildRetrofit(formatted)
         service = retrofit.create(EsheeqApiService::class.java)
-
-        if (saveToPrefs && context != null) {
-            val prefs = context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
-            prefs.edit().putString(KEY_BASE_URL, formatted).apply()
-        }
     }
 
     fun getBaseUrl(): String = baseUrl

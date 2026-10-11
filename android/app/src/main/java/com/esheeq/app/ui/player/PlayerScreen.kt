@@ -343,38 +343,14 @@ fun PlayerScreen(
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Open in External Player CTA (VLC / MX Player / Browser)
-                    IconButton(
-                        onClick = {
-                            try {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(videoUrl)).apply {
-                                    if (isDirectMedia) setDataAndType(Uri.parse(videoUrl), "video/*")
-                                }
-                                context.startActivity(
-                                    Intent.createChooser(intent, "اختر تطبيقاً للمشاهدة (VLC / متصفح)")
-                                )
-                            } catch (_: Exception) {
-                                val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(videoUrl))
-                                context.startActivity(browserIntent)
-                            }
-                        },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                            contentDescription = "مشاهدة في تطبيق خارجي",
-                            tint = TerminalBlue
-                        )
-                    }
-
-                    // Engine Toggle
+                    // Engine Switcher
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(4.dp))
                             .background(TerminalBlueDim)
-                            .border(1.dp, TerminalBlue.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                            .border(1.dp, TerminalBlue.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
                             .clickable {
                                 currentEngine = if (currentEngine == PlayerEngine.EXO_PLAYER) {
                                     PlayerEngine.WEB_EMBED
@@ -382,18 +358,18 @@ fun PlayerScreen(
                                     PlayerEngine.EXO_PLAYER
                                 }
                             }
-                            .padding(horizontal = 8.dp, vertical = 5.dp)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
                             text = if (currentEngine == PlayerEngine.EXO_PLAYER) "محرك: أصلي" else "محرك: مضمن",
-                            fontFamily = FontFamily.SansSerif,
+                            fontFamily = FontFamily.Monospace,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = TerminalBlue
                         )
                     }
 
-                    // PiP Button
+                    // Picture in Picture (PiP) Button
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && activity != null) {
                         IconButton(
                             onClick = {

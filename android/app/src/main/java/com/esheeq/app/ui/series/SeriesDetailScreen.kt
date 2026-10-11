@@ -24,14 +24,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -300,7 +295,7 @@ private fun SeriesInfoCard(series: SeriesDetails) {
                             style = BadgeStyle.PRIMARY
                         )
                         StatusBadge(
-                            text = "مسلسل",
+                            text = "[مسلسل]",
                             style = BadgeStyle.MUTED
                         )
                     }
@@ -407,9 +402,9 @@ private fun EpisodeRowItem(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(6.dp))
             .background(TerminalSurface)
-            .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
+            .border(1.dp, TerminalBorder, RoundedCornerShape(6.dp))
             .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
         Row(
@@ -445,66 +440,45 @@ private fun EpisodeRowItem(
                 // Watch CTA
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(TerminalEmerald)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(TerminalEmeraldDim)
+                        .border(1.dp, TerminalEmerald.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
                         .clickable {
                             val link = dailyLink.link ?: ""
                             if (link.isNotBlank()) onWatchClick(link)
                         }
-                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Text(
-                            text = "مشاهدة",
-                            fontFamily = FontFamily.SansSerif,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
+                    Text(
+                        text = "[مشاهدة]",
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TerminalEmerald
+                    )
                 }
 
                 // Copy CTA
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
+                        .clip(RoundedCornerShape(4.dp))
                         .background(TerminalBlueDim)
-                        .border(1.dp, TerminalBlue.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                        .border(1.dp, TerminalBlue.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
                         .clickable {
                             val link = dailyLink.link ?: ""
                             if (link.isNotBlank()) onCopyClick(link)
                         }
-                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ContentCopy,
-                            contentDescription = null,
-                            tint = TerminalBlue,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Text(
-                            text = "نسخ",
-                            fontFamily = FontFamily.SansSerif,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = TerminalBlue
-                        )
-                    }
+                    Text(
+                        text = "[نسخ]",
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TerminalBlue
+                    )
                 }
             }
         }

@@ -17,18 +17,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -59,23 +53,22 @@ fun LatestEpisodeCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(TerminalSurface)
-            .border(1.dp, TerminalBorder, RoundedCornerShape(12.dp))
-            .clickable { onWatchClick(episode) }
+            .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
             .padding(12.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Widescreen Episode Poster Frame (16:9 / 104x72 dp)
+            // Episode Thumbnail with episode number overlay
             Box(
                 modifier = Modifier
-                    .size(width = 104.dp, height = 72.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(6.dp))
                     .background(TerminalBg)
-                    .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
+                    .border(1.dp, TerminalBorder, RoundedCornerShape(6.dp))
             ) {
                 if (episode.thumb.isNotEmpty()) {
                     AsyncImage(
@@ -86,35 +79,18 @@ fun LatestEpisodeCard(
                     )
                 }
 
-                // Semi-translucent play button overlay
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .align(Alignment.Center)
-                        .clip(CircleShape)
-                        .background(Color(0x80000000)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
                 if (episode.episode.isNotEmpty()) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
-                            .background(Color(0xD90D1117))
-                            .border(1.dp, TerminalEmerald.copy(alpha = 0.4f), RoundedCornerShape(topStart = 4.dp))
-                            .padding(horizontal = 5.dp, vertical = 2.dp)
+                            .background(TerminalEmeraldDim)
+                            .border(1.dp, TerminalEmerald.copy(alpha = 0.5f), RoundedCornerShape(topStart = 4.dp))
+                            .padding(horizontal = 4.dp, vertical = 1.dp)
                     ) {
                         Text(
-                            text = "حلقة ${episode.episode}",
-                            fontFamily = FontFamily.SansSerif,
-                            fontSize = 10.sp,
+                            text = "حـ${episode.episode}",
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             color = TerminalEmerald
                         )
@@ -124,104 +100,75 @@ fun LatestEpisodeCard(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Info & Action Column
+            // Info Column
             Column(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = episode.seriesTitle.ifEmpty { episode.title },
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
                     color = TerminalTextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(3.dp))
+                Spacer(modifier = Modifier.height(2.dp))
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (episode.episode.isNotEmpty()) "الحلقة ${episode.episode}" else episode.title,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = TerminalEmerald
-                    )
-                    Text(
-                        text = " • 1080p FHD",
-                        fontSize = 11.sp,
-                        color = TerminalTextMuted
-                    )
-                }
+                Text(
+                    text = if (episode.episode.isNotEmpty()) "الحلقة ${episode.episode}" else episode.title,
+                    fontSize = 12.sp,
+                    color = TerminalTextMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
-                // Actions Row: Modern Watch & Copy Buttons
+                // Actions: Watch & Copy
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Watch CTA: Solid filled emerald button with play icon
+                    // Watch CTA
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(TerminalEmerald)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(TerminalEmeraldDim)
+                            .border(1.dp, TerminalEmerald.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
                             .clickable { onWatchClick(episode) }
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = "مشاهدة",
-                                fontFamily = FontFamily.SansSerif,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
+                        Text(
+                            text = "[مشاهدة]",
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TerminalEmerald
+                        )
                     }
 
-                    // Copy CTA: Modern tonal blue button with copy icon
+                    // Copy CTA
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(4.dp))
                             .background(TerminalBlueDim)
-                            .border(1.dp, TerminalBlue.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                            .border(1.dp, TerminalBlue.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
                             .clickable {
                                 val linkToCopy = episode.streamLink ?: episode.url
                                 copyToClipboard(context, linkToCopy)
                             }
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ContentCopy,
-                                contentDescription = null,
-                                tint = TerminalBlue,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Text(
-                                text = "نسخ",
-                                fontFamily = FontFamily.SansSerif,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = TerminalBlue
-                            )
-                        }
+                        Text(
+                            text = "[نسخ]",
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TerminalBlue
+                        )
                     }
                 }
             }

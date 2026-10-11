@@ -15,7 +15,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -34,7 +33,6 @@ import androidx.compose.ui.unit.sp
 import com.esheeq.app.ui.theme.TerminalBlue
 import com.esheeq.app.ui.theme.TerminalBorder
 import com.esheeq.app.ui.theme.TerminalSurface
-import com.esheeq.app.ui.theme.TerminalSurfaceElevated
 import com.esheeq.app.ui.theme.TerminalTextMuted
 import com.esheeq.app.ui.theme.TerminalTextPrimary
 
@@ -42,7 +40,7 @@ import com.esheeq.app.ui.theme.TerminalTextPrimary
 fun SearchBarComponent(
     query: String,
     onQueryChange: (String) -> Unit,
-    placeholder: String = "ابحث عن مسلسل (مثال: طائر الرفراف، الحفرة)...",
+    placeholder: String = "ابحث عن اسم المسلسل (مثال: الحفرة، طائر الرفراف)...",
     modifier: Modifier = Modifier
 ) {
     val focusManager = LocalFocusManager.current
@@ -50,20 +48,22 @@ fun SearchBarComponent(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(TerminalSurfaceElevated)
-            .border(1.dp, TerminalBorder, RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(8.dp))
+            .background(TerminalSurface)
+            .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
             .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = "بحث",
-                tint = if (query.isNotEmpty()) TerminalBlue else TerminalTextMuted,
-                modifier = Modifier.size(20.dp)
+            // Command line terminal prompt
+            Text(
+                text = ">",
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                color = TerminalBlue,
+                fontSize = 16.sp
             )
 
             Spacer(modifier = Modifier.width(10.dp))
