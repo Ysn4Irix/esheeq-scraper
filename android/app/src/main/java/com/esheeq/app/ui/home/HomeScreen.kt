@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -140,15 +141,32 @@ fun HomeScreen(
                 // Latest Episodes Feed (Default View)
                 item {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(
-                            text = "آخر 5 حلقات مضافة",
-                            fontFamily = FontFamily.SansSerif,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TerminalTextPrimary
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(width = 4.dp, height = 18.dp)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(TerminalEmerald)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "آخر الحلقات المضافة",
+                                fontFamily = FontFamily.SansSerif,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TerminalTextPrimary
+                            )
+                        }
+                        StatusBadge(
+                            text = "${uiState.latestEpisodes.size.coerceAtLeast(5)} حلقات جديدة",
+                            style = BadgeStyle.SUCCESS,
+                            showDot = true
                         )
                     }
                 }

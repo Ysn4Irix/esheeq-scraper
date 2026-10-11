@@ -3,6 +3,7 @@ package com.esheeq.app.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -45,23 +46,23 @@ fun SeriesCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(TerminalSurface)
-            .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
+            .border(1.dp, TerminalBorder, RoundedCornerShape(10.dp))
             .clickable { onClick(series) }
-            .padding(10.dp)
+            .padding(12.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Poster
+            // Poster (True 3:4 portrait ratio)
             Box(
                 modifier = Modifier
-                    .size(width = 54.dp, height = 75.dp)
-                    .clip(RoundedCornerShape(6.dp))
+                    .size(width = 60.dp, height = 84.dp)
+                    .clip(RoundedCornerShape(8.dp))
                     .background(TerminalBg)
-                    .border(1.dp, TerminalBorder, RoundedCornerShape(6.dp))
+                    .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
             ) {
                 if (series.cover.isNotEmpty()) {
                     AsyncImage(
@@ -81,25 +82,32 @@ fun SeriesCard(
             ) {
                 Text(
                     text = series.title,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
                     color = TerminalTextPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     StatusBadge(
-                        text = "[مسلسل]",
+                        text = "مسلسل",
                         style = BadgeStyle.PRIMARY
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "•",
+                        fontSize = 12.sp,
+                        color = TerminalTextMuted
+                    )
                     Text(
                         text = "1080p FHD",
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         color = TerminalTextMuted
                     )
                 }

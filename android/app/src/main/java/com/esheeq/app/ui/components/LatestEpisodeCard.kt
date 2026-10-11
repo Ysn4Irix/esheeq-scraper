@@ -18,11 +18,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -34,11 +40,11 @@ import coil.compose.AsyncImage
 import com.esheeq.app.data.model.LatestEpisode
 import com.esheeq.app.ui.theme.TerminalBg
 import com.esheeq.app.ui.theme.TerminalBlue
-import com.esheeq.app.ui.theme.TerminalBlueDim
 import com.esheeq.app.ui.theme.TerminalBorder
+import com.esheeq.app.ui.theme.TerminalBorderSubtle
 import com.esheeq.app.ui.theme.TerminalEmerald
-import com.esheeq.app.ui.theme.TerminalEmeraldDim
 import com.esheeq.app.ui.theme.TerminalSurface
+import com.esheeq.app.ui.theme.TerminalSurfaceElevated
 import com.esheeq.app.ui.theme.TerminalTextMuted
 import com.esheeq.app.ui.theme.TerminalTextPrimary
 
@@ -53,120 +59,197 @@ fun LatestEpisodeCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(TerminalSurface)
-            .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
-            .padding(12.dp)
+            .border(1.dp, TerminalBorder, RoundedCornerShape(12.dp))
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
         ) {
-            // Episode Thumbnail with episode number overlay
-            Box(
+            // Media & Info Header (Clickable to watch directly)
+            Row(
                 modifier = Modifier
-                    .size(64.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(TerminalBg)
-                    .border(1.dp, TerminalBorder, RoundedCornerShape(6.dp))
+                    .fillMaxWidth()
+                    .clickable { onWatchClick(episode) },
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                if (episode.thumb.isNotEmpty()) {
-                    AsyncImage(
-                        model = episode.thumb,
-                        contentDescription = episode.title,
-                        modifier = Modifier.matchParentSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-
-                if (episode.episode.isNotEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .background(TerminalEmeraldDim)
-                            .border(1.dp, TerminalEmerald.copy(alpha = 0.5f), RoundedCornerShape(topStart = 4.dp))
-                            .padding(horizontal = 4.dp, vertical = 1.dp)
-                    ) {
-                        Text(
-                            text = "حـ${episode.episode}",
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TerminalEmerald
+                // Episode Poster (True 3:4 portrait ratio for TV series)
+                Box(
+                    modifier = Modifier
+                        .size(width = 66.dp, height = 90.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(TerminalBg)
+                        .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
+                ) {
+                    if (episode.thumb.isNotEmpty()) {
+                        AsyncImage(
+                            model = episode.thumb,
+                            contentDescription = episode.title,
+                            modifier = Modifier.matchParentSize(),
+                            contentScale = ContentScale.Crop
                         )
                     }
+
+                    // Scrim gradient for contrast
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(Color.Transparent, Color(0xB3000000)),
+                                    startY = 50f
+                                )
+                            )
+                    )
+
+                    if (episode.episode.isNotEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(4.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(Color(0xD90D1117))
+                                .border(0.5.dp, TerminalEmerald.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 5.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "حـ${episode.episode}",
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TerminalEmerald
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Info Column
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = episode.seriesTitle.ifEmpty { episode.title },
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = TerminalTextPrimary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        StatusBadge(
+                            text = if (episode.episode.isNotEmpty()) "الحلقة ${episode.episode}" else "حلقة جديدة",
+                            style = BadgeStyle.PRIMARY
+                        )
+
+                        Text(
+                            text = "•",
+                            fontSize = 12.sp,
+                            color = TerminalTextMuted
+                        )
+
+                        Text(
+                            text = "1080p FHD",
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp,
+                            color = TerminalTextMuted
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text(
+                        text = "سيرفر سريع • جودة أصلية",
+                        fontSize = 11.sp,
+                        color = TerminalTextMuted
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // Info Column
-            Column(
-                modifier = Modifier.weight(1f)
+            // Subtle divider
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(TerminalBorderSubtle)
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Action Buttons Row: Balanced across entire width
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = episode.seriesTitle.ifEmpty { episode.title },
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
-                    color = TerminalTextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                Text(
-                    text = if (episode.episode.isNotEmpty()) "الحلقة ${episode.episode}" else episode.title,
-                    fontSize = 12.sp,
-                    color = TerminalTextMuted,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                // Actions: Watch & Copy
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                // Watch CTA (Primary action)
+                Box(
+                    modifier = Modifier
+                        .weight(1.3f)
+                        .height(38.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(TerminalEmerald)
+                        .clickable { onWatchClick(episode) },
+                    contentAlignment = Alignment.Center
                 ) {
-                    // Watch CTA
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(TerminalEmeraldDim)
-                            .border(1.dp, TerminalEmerald.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
-                            .clickable { onWatchClick(episode) }
-                            .padding(horizontal = 10.dp, vertical = 4.dp),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
                         Text(
-                            text = "[مشاهدة]",
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 11.sp,
+                            text = "مشاهدة الآن",
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TerminalEmerald
+                            color = Color.White
                         )
                     }
+                }
 
-                    // Copy CTA
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(TerminalBlueDim)
-                            .border(1.dp, TerminalBlue.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
-                            .clickable {
-                                val linkToCopy = episode.streamLink ?: episode.url
-                                copyToClipboard(context, linkToCopy)
-                            }
-                            .padding(horizontal = 10.dp, vertical = 4.dp),
-                        contentAlignment = Alignment.Center
+                // Copy CTA (Secondary action)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(38.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(TerminalSurfaceElevated)
+                        .border(1.dp, TerminalBorder, RoundedCornerShape(6.dp))
+                        .clickable {
+                            val linkToCopy = episode.streamLink ?: episode.url
+                            copyToClipboard(context, linkToCopy)
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = null,
+                            tint = TerminalBlue,
+                            modifier = Modifier.size(14.dp)
+                        )
                         Text(
-                            text = "[نسخ]",
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
+                            text = "نسخ الرابط",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
                             color = TerminalBlue
                         )
                     }
