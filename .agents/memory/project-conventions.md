@@ -17,3 +17,10 @@ updated: 2026-07-12
 
 ## Documentation & Plans
 - Store all plans and future markdown files in folder called `Docs`.
+
+## Android Versioning & Commits
+- Always bump version in `android/app/version.properties` with every code commit based on SemVer:
+  - `fix(...)`: increment PATCH (e.g. `2.0.0` -> `2.0.1`) and increment `versionCode` (+1).
+  - `feat(...)`: increment MINOR (e.g. `2.0.0` -> `2.1.0`) and increment `versionCode` (+1).
+  - `BREAKING CHANGE`: increment MAJOR (e.g. `2.0.0` -> `3.0.0`) and increment `versionCode` (+1).
+- Never commit code changes without bundling or following up with the corresponding version bump in `android/app/version.properties`.
