@@ -32,7 +32,8 @@ interface EsheeqApiService {
 }
 
 object ApiClient {
-    // 10.0.2.2 routes to host localhost in Android Emulator
+    private const val PREFS_NAME = "esheeq_prefs"
+    private const val KEY_BASE_URL = "base_url"
     private const val DEFAULT_BASE_URL = "http://10.0.2.2:4000/api/"
 
     @Volatile
@@ -59,11 +60,23 @@ object ApiClient {
             .build()
     }
 
-    fun setCustomBaseUrl(newUrl: String) {
-        val formatted = if (newUrl.endsWith("/")) newUrl else "$newUrl/"
+    fun init(context: android.content.Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
+        val saved = prefs.getString(KEY_BASE_URL, DEFAULT_BASE_URL) ?: DEFAULT_BASE_URL
+        setCustomBaseUrl(context, saved, saveToPrefs = false)
+    }
+
+    fun setCustomBaseUrl(context: android.content.Context? = null, newUrl: String, saveToPrefs: Boolean = true) {
+        val trimmed = newUrl.trim()
+        val formatted = if (trimmed.endsWith("/")) trimmed else "$trimmed/"
         baseUrl = formatted
         retrofit = buildRetrofit(formatted)
         service = retrofit.create(EsheeqApiService::class.java)
+
+        if (saveToPrefs && context != null) {
+            val prefs = context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
+            prefs.edit().putString(KEY_BASE_URL, formatted).apply()
+        }
     }
 
     fun getBaseUrl(): String = baseUrl
