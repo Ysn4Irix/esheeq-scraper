@@ -1,6 +1,6 @@
 FROM node:18-alpine
 WORKDIR /app
-COPY ./client/package.json ./
+COPY ./client/package.json ./client/pnpm-lock.yaml* ./client/pnpm-workspace.yaml* ./client/.npmrc* ./
 RUN npm install --location=global pnpm
 RUN pnpm install
 COPY ./client .

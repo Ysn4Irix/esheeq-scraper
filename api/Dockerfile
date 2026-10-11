@@ -7,7 +7,7 @@ ARG REDIS_PASSWORD=${REDIS_PASSWORD}
 ENV REDIS_PASSWORD=${REDIS_PASSWORD}
 
 WORKDIR /app
-COPY ./api/package.json .
+COPY ./api/package.json ./api/pnpm-lock.yaml* ./
 RUN npm install --location=global pnpm
 RUN pnpm install
 COPY ./api .
