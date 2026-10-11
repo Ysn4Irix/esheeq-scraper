@@ -20,6 +20,9 @@ import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -176,6 +179,7 @@ fun PlayerScreen(
     var customView by remember { mutableStateOf<View?>(null) }
     var customViewCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
     var isWebLoading by remember { mutableStateOf(true) }
+    var webViewInstance by remember { mutableStateOf<WebView?>(null) }
 
     // ExoPlayer Instance: Only initialize when currentEngine is EXO_PLAYER
     val exoPlayer = remember(context, videoUrl, currentEngine) {
@@ -191,9 +195,80 @@ fun PlayerScreen(
         }
     }
 
-    DisposableEffect(exoPlayer) {
+    // Comprehensive cleanup for both ExoPlayer and WebView engines
+    val cleanupPlayback: () -> Unit = remember(exoPlayer) {
+        {
+            try {
+                exoPlayer?.stop()
+                exoPlayer?.release()
+            } catch (_: Exception) {}
+
+            try {
+                webViewInstance?.apply {
+                    stopLoading()
+                    pauseTimers()
+                    onPause()
+                    loadUrl("about:blank")
+                    clearHistory()
+                    removeAllViews()
+                    destroy()
+                }
+            } catch (_: Exception) {}
+            webViewInstance = null
+
+            try {
+                if (customView != null) {
+                    customViewCallback?.onCustomViewHidden()
+                    customView = null
+                    customViewCallback = null
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
+    val safelyNavigateBack: () -> Unit = remember(cleanupPlayback) {
+        {
+            cleanupPlayback()
+            onBackClick()
+        }
+    }
+
+    // Terminate playback when composable leaves composition (navigation away)
+    DisposableEffect(Unit) {
         onDispose {
-            exoPlayer?.release()
+            cleanupPlayback()
+        }
+    }
+
+    // Pause audio/video on app minimize/lock unless in Picture-in-Picture
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, cleanupPlayback) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> {
+                    val inPip = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        activity?.isInPictureInPictureMode == true
+                    } else false
+                    if (!inPip) {
+                        exoPlayer?.pause()
+                        webViewInstance?.onPause()
+                        webViewInstance?.pauseTimers()
+                    }
+                }
+                Lifecycle.Event.ON_RESUME -> {
+                    webViewInstance?.onResume()
+                    webViewInstance?.resumeTimers()
+                }
+                Lifecycle.Event.ON_DESTROY -> {
+                    cleanupPlayback()
+                }
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            cleanupPlayback()
         }
     }
 
@@ -201,8 +276,9 @@ fun PlayerScreen(
         if (customView != null) {
             customViewCallback?.onCustomViewHidden()
             customView = null
+            customViewCallback = null
         } else {
-            onBackClick()
+            safelyNavigateBack()
         }
     }
 
@@ -251,6 +327,7 @@ fun PlayerScreen(
                         AndroidView(
                             factory = { ctx ->
                                 WebView(ctx).apply {
+                                    webViewInstance = this
                                     layoutParams = ViewGroup.LayoutParams(
                                         ViewGroup.LayoutParams.MATCH_PARENT,
                                         ViewGroup.LayoutParams.MATCH_PARENT
@@ -339,6 +416,25 @@ fun PlayerScreen(
                                     }
                                 }
                             },
+                            onReset = { view ->
+                                view.stopLoading()
+                                view.onPause()
+                                view.loadUrl("about:blank")
+                            },
+                            onRelease = { view ->
+                                try {
+                                    view.stopLoading()
+                                    view.pauseTimers()
+                                    view.onPause()
+                                    view.loadUrl("about:blank")
+                                    view.clearHistory()
+                                    view.removeAllViews()
+                                    view.destroy()
+                                } catch (_: Exception) {}
+                                if (webViewInstance == view) {
+                                    webViewInstance = null
+                                }
+                            },
                             modifier = Modifier.fillMaxSize()
                         )
 
@@ -379,7 +475,7 @@ fun PlayerScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = onBackClick,
+                    onClick = safelyNavigateBack,
                     modifier = Modifier
                         .size(38.dp)
                         .clip(CircleShape)
