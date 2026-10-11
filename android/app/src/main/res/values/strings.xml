@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">قصة عشق</string>
     <string name="search_placeholder">ابحث عن اسم المسلسل (مثال: الحفرة، طائر الرفراف)...</string>
-    <string name="latest_episodes">قائمة الانتظار // آخر 5 حلقات مضافة</string>
+    <string name="latest_episodes">آخر 5 حلقات مضافة</string>
     <string name="series_index">فهرس المسلسلات // تفاصيل العمل</string>
     <string name="watch">مشاهدة</string>
     <string name="copy">نسخ</string>

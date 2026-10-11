@@ -63,8 +63,7 @@ fun HomeScreen(
             .background(TerminalBg)
     ) {
         TerminalTopBar(
-            title = "قصة عشق",
-            subTitle = "النظام الطرفي // إصدار أندرويد الأصلي 1.0"
+            title = "قصة عشق"
         )
 
         LazyColumn(
@@ -142,21 +141,14 @@ fun HomeScreen(
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "قائمة الانتظار // آخر 5 حلقات مضافة",
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 12.sp,
+                            text = "آخر 5 حلقات مضافة",
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = TerminalTextPrimary
-                        )
-
-                        StatusBadge(
-                            text = "5 حلقات",
-                            style = BadgeStyle.SUCCESS,
-                            showDot = true
                         )
                     }
                 }

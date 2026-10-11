@@ -50,6 +50,7 @@ fun TerminalTopBar(
     title: String = "قصة عشق",
     subTitle: String? = null,
     showBackButton: Boolean = false,
+    showLiveIndicator: Boolean = false,
     onBackClick: () -> Unit = {}
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
@@ -124,30 +125,32 @@ fun TerminalTopBar(
                 }
             }
 
-            // Pulsing live status indicator
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(TerminalEmeraldDim)
-                    .border(1.dp, TerminalEmerald.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
+            if (showLiveIndicator) {
+                // Pulsing live status indicator
+                Row(
                     modifier = Modifier
-                        .size(8.dp)
-                        .alpha(pulseAlpha)
-                        .clip(CircleShape)
-                        .background(TerminalEmerald)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "متصل // بث حي",
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 11.sp,
-                    color = TerminalEmerald,
-                    fontWeight = FontWeight.Medium
-                )
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(TerminalEmeraldDim)
+                        .border(1.dp, TerminalEmerald.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .alpha(pulseAlpha)
+                            .clip(CircleShape)
+                            .background(TerminalEmerald)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "متصل // بث حي",
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp,
+                        color = TerminalEmerald,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
 
