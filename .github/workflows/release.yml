@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release Tag (e.g., v1.0.0)'
+        description: 'Release Tag (e.g., v2.0.0)'
         required: false
         default: ''
       prerelease:
@@ -43,20 +43,22 @@ jobs:
         id: version
         shell: bash
         run: |
+          PROP_VER=$(grep 'versionName=' android/app/version.properties | cut -d'=' -f2 | tr -d '\r')
+          PROP_CODE=$(grep 'versionCode=' android/app/version.properties | cut -d'=' -f2 | tr -d '\r')
+
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             TAG="${GITHUB_REF#refs/tags/}"
           elif [[ -n "${{ inputs.tag_name }}" ]]; then
             TAG="${{ inputs.tag_name }}"
           else
-            TAG="v1.0.1"
+            TAG="v${PROP_VER:-2.0.0}"
           fi
           # Strip leading 'v'
           VERSION_NAME="${TAG#v}"
-          
-          # Maintain consistent increasing versionCode using git commit count
-          COMMIT_COUNT=$(git rev-list --count HEAD 2>/dev/null || echo "10")
-          VERSION_CODE=$((COMMIT_COUNT + 10))
-          
+
+          # Maintain consistent increasing versionCode
+          VERSION_CODE="${PROP_CODE:-200}"
+
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
           echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"

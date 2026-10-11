@@ -16,11 +16,11 @@ val versionProps = Properties().apply {
 
 val appVersionCode = (project.findProperty("versionCode") as? String
     ?: System.getenv("VERSION_CODE")
-    ?: versionProps.getProperty("versionCode", "2")).toInt()
+    ?: versionProps.getProperty("versionCode", "200")).toInt()
 
 val appVersionName = project.findProperty("versionName") as? String
     ?: System.getenv("VERSION_NAME")
-    ?: versionProps.getProperty("versionName", "1.0.1")
+    ?: versionProps.getProperty("versionName", "2.0.0")
 
 android {
     namespace = "com.esheeq.app"
