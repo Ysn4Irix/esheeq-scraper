@@ -41,7 +41,6 @@ import com.esheeq.app.data.model.LatestEpisode
 import com.esheeq.app.ui.theme.TerminalBg
 import com.esheeq.app.ui.theme.TerminalBlue
 import com.esheeq.app.ui.theme.TerminalBorder
-import com.esheeq.app.ui.theme.TerminalBorderSubtle
 import com.esheeq.app.ui.theme.TerminalEmerald
 import com.esheeq.app.ui.theme.TerminalSurface
 import com.esheeq.app.ui.theme.TerminalSurfaceElevated
@@ -63,141 +62,128 @@ fun LatestEpisodeCard(
             .background(TerminalSurface)
             .border(1.dp, TerminalBorder, RoundedCornerShape(12.dp))
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp)
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Media & Info Header (Clickable to watch directly)
-            Row(
+            // Episode Poster (True 3:4 portrait ratio for TV series)
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onWatchClick(episode) },
-                verticalAlignment = Alignment.CenterVertically
+                    .size(width = 64.dp, height = 88.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(TerminalBg)
+                    .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
+                    .clickable { onWatchClick(episode) }
             ) {
-                // Episode Poster (True 3:4 portrait ratio for TV series)
-                Box(
-                    modifier = Modifier
-                        .size(width = 66.dp, height = 90.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(TerminalBg)
-                        .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
-                ) {
-                    if (episode.thumb.isNotEmpty()) {
-                        AsyncImage(
-                            model = episode.thumb,
-                            contentDescription = episode.title,
-                            modifier = Modifier.matchParentSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-
-                    // Scrim gradient for contrast
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(Color.Transparent, Color(0xB3000000)),
-                                    startY = 50f
-                                )
-                            )
+                if (episode.thumb.isNotEmpty()) {
+                    AsyncImage(
+                        model = episode.thumb,
+                        contentDescription = episode.title,
+                        modifier = Modifier.matchParentSize(),
+                        contentScale = ContentScale.Crop
                     )
-
-                    if (episode.episode.isNotEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(4.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(Color(0xD90D1117))
-                                .border(0.5.dp, TerminalEmerald.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
-                                .padding(horizontal = 5.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "حـ${episode.episode}",
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TerminalEmerald
-                            )
-                        }
-                    }
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                // Scrim gradient for contrast
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, Color(0xB3000000)),
+                                startY = 40f
+                            )
+                        )
+                )
 
-                // Info Column
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = episode.seriesTitle.ifEmpty { episode.title },
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        color = TerminalTextPrimary,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                if (episode.episode.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(3.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0xD90D1117))
+                            .border(0.5.dp, TerminalEmerald.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 4.dp, vertical = 2.dp)
                     ) {
-                        StatusBadge(
-                            text = if (episode.episode.isNotEmpty()) "الحلقة ${episode.episode}" else "حلقة جديدة",
-                            style = BadgeStyle.PRIMARY
-                        )
-
                         Text(
-                            text = "•",
-                            fontSize = 12.sp,
-                            color = TerminalTextMuted
-                        )
-
-                        Text(
-                            text = "1080p FHD",
+                            text = "حـ${episode.episode}",
                             fontFamily = FontFamily.Monospace,
-                            fontSize = 11.sp,
-                            color = TerminalTextMuted
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TerminalEmerald
                         )
                     }
+                }
+            }
 
-                    Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Info Column in the center
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onWatchClick(episode) }
+            ) {
+                Text(
+                    text = episode.seriesTitle.ifEmpty { episode.title },
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = TerminalTextPrimary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    StatusBadge(
+                        text = if (episode.episode.isNotEmpty()) "الحلقة ${episode.episode}" else "حلقة جديدة",
+                        style = BadgeStyle.PRIMARY
+                    )
 
                     Text(
-                        text = "سيرفر سريع • جودة أصلية",
+                        text = "•",
+                        fontSize = 12.sp,
+                        color = TerminalTextMuted
+                    )
+
+                    Text(
+                        text = "1080p FHD",
+                        fontFamily = FontFamily.Monospace,
                         fontSize = 11.sp,
                         color = TerminalTextMuted
                     )
                 }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = "سيرفر سريع • جودة أصلية",
+                    fontSize = 11.sp,
+                    color = TerminalTextMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.width(10.dp))
 
-            // Subtle divider
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(TerminalBorderSubtle)
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Action Buttons Row: Balanced across entire width
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+            // Direct Actions Column on the LEFT (Eliminating the empty space)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 // Watch CTA (Primary action)
                 Box(
                     modifier = Modifier
-                        .weight(1.3f)
-                        .height(38.dp)
+                        .width(88.dp)
+                        .height(36.dp)
                         .clip(RoundedCornerShape(6.dp))
                         .background(TerminalEmerald)
                         .clickable { onWatchClick(episode) },
@@ -205,16 +191,16 @@ fun LatestEpisodeCard(
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.PlayArrow,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(16.dp)
                         )
                         Text(
-                            text = "مشاهدة الآن",
+                            text = "مشاهدة",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -225,8 +211,8 @@ fun LatestEpisodeCard(
                 // Copy CTA (Secondary action)
                 Box(
                     modifier = Modifier
-                        .weight(1f)
-                        .height(38.dp)
+                        .width(88.dp)
+                        .height(32.dp)
                         .clip(RoundedCornerShape(6.dp))
                         .background(TerminalSurfaceElevated)
                         .border(1.dp, TerminalBorder, RoundedCornerShape(6.dp))
@@ -238,17 +224,17 @@ fun LatestEpisodeCard(
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.ContentCopy,
                             contentDescription = null,
                             tint = TerminalBlue,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(13.dp)
                         )
                         Text(
                             text = "نسخ الرابط",
-                            fontSize = 12.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Medium,
                             color = TerminalBlue
                         )
