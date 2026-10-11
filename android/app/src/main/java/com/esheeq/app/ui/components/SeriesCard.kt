@@ -45,11 +45,11 @@ fun SeriesCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(TerminalSurface)
-            .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
+            .border(1.dp, TerminalBorder, RoundedCornerShape(12.dp))
             .clickable { onClick(series) }
-            .padding(10.dp)
+            .padding(12.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -58,10 +58,10 @@ fun SeriesCard(
             // Poster
             Box(
                 modifier = Modifier
-                    .size(width = 54.dp, height = 75.dp)
-                    .clip(RoundedCornerShape(6.dp))
+                    .size(width = 58.dp, height = 80.dp)
+                    .clip(RoundedCornerShape(8.dp))
                     .background(TerminalBg)
-                    .border(1.dp, TerminalBorder, RoundedCornerShape(6.dp))
+                    .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
             ) {
                 if (series.cover.isNotEmpty()) {
                     AsyncImage(
@@ -81,8 +81,8 @@ fun SeriesCard(
             ) {
                 Text(
                     text = series.title,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
                     color = TerminalTextPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -92,7 +92,7 @@ fun SeriesCard(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     StatusBadge(
-                        text = "[مسلسل]",
+                        text = "مسلسل",
                         style = BadgeStyle.PRIMARY
                     )
                     Spacer(modifier = Modifier.width(8.dp))

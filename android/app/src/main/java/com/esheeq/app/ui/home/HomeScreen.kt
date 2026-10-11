@@ -75,7 +75,8 @@ fun HomeScreen(
             .background(TerminalBg)
     ) {
         TerminalTopBar(
-            title = "قصة عشق"
+            title = "قصة عشق",
+            onServerClick = { showServerDialog = true }
         )
 
         LazyColumn(
@@ -153,13 +154,20 @@ fun HomeScreen(
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        Box(
+                            modifier = Modifier
+                                .size(width = 3.dp, height = 16.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(TerminalEmerald)
+                        )
                         Text(
                             text = "آخر 5 حلقات مضافة",
                             fontFamily = FontFamily.SansSerif,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
                             color = TerminalTextPrimary
                         )
                     }
