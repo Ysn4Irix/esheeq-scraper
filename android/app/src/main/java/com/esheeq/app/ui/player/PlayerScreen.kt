@@ -3,8 +3,6 @@ package com.esheeq.app.ui.player
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.PictureInPictureParams
-import android.content.Intent
-import android.content.pm.ActivityInfo
 import android.graphics.Color as AndroidColor
 import android.net.Uri
 import android.os.Build
@@ -20,36 +18,22 @@ import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.PictureInPictureAlt
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -62,27 +46,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import kotlinx.coroutines.delay
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
-import com.esheeq.app.ui.theme.TerminalBg
-import com.esheeq.app.ui.theme.TerminalBlue
-import com.esheeq.app.ui.theme.TerminalBlueDim
-import com.esheeq.app.ui.theme.TerminalBorder
+import com.esheeq.app.MainActivity
 import com.esheeq.app.ui.theme.TerminalEmerald
-import com.esheeq.app.ui.theme.TerminalEmeraldDim
-import com.esheeq.app.ui.theme.TerminalSurface
-import com.esheeq.app.ui.theme.TerminalTextMuted
-import com.esheeq.app.ui.theme.TerminalTextPrimary
+import kotlinx.coroutines.delay
 
 enum class PlayerEngine {
     EXO_PLAYER,
@@ -168,8 +143,8 @@ fun PlayerScreen(
     val isDirectMedia = videoUrl.contains(".m3u8", ignoreCase = true) ||
             videoUrl.contains(".mp4", ignoreCase = true)
 
-    var currentEngine by remember {
-        mutableStateOf(if (isDirectMedia) PlayerEngine.EXO_PLAYER else PlayerEngine.WEB_EMBED)
+    val currentEngine = remember(videoUrl) {
+        if (isDirectMedia) PlayerEngine.EXO_PLAYER else PlayerEngine.WEB_EMBED
     }
 
     val effectiveEmbedUrl = remember(videoUrl) {
@@ -179,7 +154,6 @@ fun PlayerScreen(
     var customView by remember { mutableStateOf<View?>(null) }
     var customViewCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
     var isWebLoading by remember { mutableStateOf(true) }
-    var webViewInstance by remember { mutableStateOf<WebView?>(null) }
 
     // ExoPlayer Instance: Only initialize when currentEngine is EXO_PLAYER
     val exoPlayer = remember(context, videoUrl, currentEngine) {
@@ -195,34 +169,164 @@ fun PlayerScreen(
         }
     }
 
+    // WebView Instance: Only initialize when currentEngine is WEB_EMBED
+    val webView = remember(context, videoUrl, currentEngine) {
+        if (currentEngine == PlayerEngine.WEB_EMBED) {
+            WebView(context).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                setBackgroundColor(AndroidColor.BLACK)
+                setLayerType(View.LAYER_TYPE_HARDWARE, null)
+
+                val currentWebView = this
+                CookieManager.getInstance().apply {
+                    setAcceptCookie(true)
+                    setAcceptThirdPartyCookies(currentWebView, true)
+                }
+
+                settings.apply {
+                    javaScriptEnabled = true
+                    domStorageEnabled = true
+                    mediaPlaybackRequiresUserGesture = false
+                    allowFileAccess = false
+                    allowContentAccess = true
+                    loadWithOverviewMode = true
+                    useWideViewPort = true
+                    mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                    cacheMode = WebSettings.LOAD_DEFAULT
+                    userAgentString =
+                        "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+                }
+
+                webViewClient = object : WebViewClient() {
+                    override fun onPageFinished(view: WebView?, url: String?) {
+                        super.onPageFinished(view, url)
+                        isWebLoading = false
+                    }
+
+                    override fun shouldOverrideUrlLoading(
+                        view: WebView?,
+                        request: WebResourceRequest?
+                    ): Boolean {
+                        val reqUrl = request?.url ?: return false
+                        val scheme = reqUrl.scheme?.lowercase() ?: ""
+                        if (scheme != "http" && scheme != "https") {
+                            return true
+                        }
+                        if (request.isForMainFrame) {
+                            val host = reqUrl.host?.lowercase() ?: ""
+                            if (host.contains("dailymotion.com") ||
+                                host.contains("dmcdn.net") ||
+                                host.contains("dmxleo.com") ||
+                                host.contains("mail.ru") ||
+                                host.contains("ok.ru") ||
+                                host.contains("vidshar") ||
+                                host.contains("qeseh") ||
+                                host.contains("qesen")
+                            ) {
+                                return false
+                            }
+                            return true
+                        }
+                        return false
+                    }
+                }
+
+                webChromeClient = object : WebChromeClient() {
+                    override fun onShowCustomView(
+                        view: View?,
+                        callback: CustomViewCallback?
+                    ) {
+                        customView = view
+                        customViewCallback = callback
+                    }
+
+                    override fun onHideCustomView() {
+                        try {
+                            (customView?.parent as? ViewGroup)?.removeView(customView)
+                            customViewCallback?.onCustomViewHidden()
+                        } catch (_: Exception) {}
+                        customView = null
+                        customViewCallback = null
+                    }
+                }
+
+                val dmId = extractDailymotionId(videoUrl)
+                if (dmId != null) {
+                    val html = buildDailymotionHtml(dmId)
+                    loadDataWithBaseURL("https://www.dailymotion.com/", html, "text/html", "UTF-8", null)
+                } else {
+                    loadUrl(effectiveEmbedUrl)
+                }
+            }
+        } else {
+            null
+        }
+    }
+
+    var isCleanedUp by remember { mutableStateOf(false) }
+
     // Comprehensive cleanup for both ExoPlayer and WebView engines
-    val cleanupPlayback: () -> Unit = remember(exoPlayer) {
+    val cleanupPlayback: () -> Unit = remember(exoPlayer, webView) {
         {
-            try {
-                exoPlayer?.stop()
-                exoPlayer?.release()
-            } catch (_: Exception) {}
+            if (!isCleanedUp) {
+                isCleanedUp = true
 
-            try {
-                webViewInstance?.apply {
-                    stopLoading()
-                    pauseTimers()
-                    onPause()
-                    loadUrl("about:blank")
-                    clearHistory()
-                    removeAllViews()
-                    destroy()
-                }
-            } catch (_: Exception) {}
-            webViewInstance = null
+                try {
+                    exoPlayer?.stop()
+                    exoPlayer?.clearMediaItems()
+                    exoPlayer?.release()
+                } catch (_: Exception) {}
 
-            try {
-                if (customView != null) {
-                    customViewCallback?.onCustomViewHidden()
-                    customView = null
-                    customViewCallback = null
-                }
-            } catch (_: Exception) {}
+                try {
+                    if (customView != null) {
+                        (customView?.parent as? ViewGroup)?.removeView(customView)
+                        customViewCallback?.onCustomViewHidden()
+                        customView = null
+                        customViewCallback = null
+                    }
+                } catch (_: Exception) {}
+
+                try {
+                    webView?.apply {
+                        evaluateJavascript(
+                            """
+                            (function() {
+                                var videos = document.getElementsByTagName('video');
+                                for (var i = 0; i < videos.length; i++) {
+                                    videos[i].pause();
+                                    videos[i].src = '';
+                                    videos[i].load();
+                                }
+                                var audios = document.getElementsByTagName('audio');
+                                for (var i = 0; i < audios.length; i++) {
+                                    audios[i].pause();
+                                    audios[i].src = '';
+                                    audios[i].load();
+                                }
+                                var iframes = document.getElementsByTagName('iframe');
+                                for (var i = 0; i < iframes.length; i++) {
+                                    iframes[i].src = 'about:blank';
+                                }
+                            })();
+                            """.trimIndent(),
+                            null
+                        )
+                        stopLoading()
+                        pauseTimers()
+                        onPause()
+                        loadUrl("about:blank")
+                        clearHistory()
+                        (parent as? ViewGroup)?.removeView(this)
+                        removeAllViews()
+                        destroy()
+                    }
+                } catch (_: Exception) {}
+
+                MainActivity.flushAudioOutput(context)
+            }
         }
     }
 
@@ -245,19 +349,29 @@ fun PlayerScreen(
     DisposableEffect(lifecycleOwner, cleanupPlayback) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_PAUSE -> {
+                Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_STOP -> {
                     val inPip = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                         activity?.isInPictureInPictureMode == true
                     } else false
                     if (!inPip) {
                         exoPlayer?.pause()
-                        webViewInstance?.onPause()
-                        webViewInstance?.pauseTimers()
+                        webView?.evaluateJavascript(
+                            "document.querySelectorAll('video, audio').forEach(function(el){ el.pause(); });",
+                            null
+                        )
+                        webView?.onPause()
+                        webView?.pauseTimers()
+                        MainActivity.flushAudioOutput(context)
                     }
                 }
                 Lifecycle.Event.ON_RESUME -> {
-                    webViewInstance?.onResume()
-                    webViewInstance?.resumeTimers()
+                    val inPip = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        activity?.isInPictureInPictureMode == true
+                    } else false
+                    if (!inPip) {
+                        webView?.onResume()
+                        webView?.resumeTimers()
+                    }
                 }
                 Lifecycle.Event.ON_DESTROY -> {
                     cleanupPlayback()
@@ -274,7 +388,10 @@ fun PlayerScreen(
 
     BackHandler {
         if (customView != null) {
-            customViewCallback?.onCustomViewHidden()
+            try {
+                (customView?.parent as? ViewGroup)?.removeView(customView)
+                customViewCallback?.onCustomViewHidden()
+            } catch (_: Exception) {}
             customView = null
             customViewCallback = null
         } else {
@@ -287,154 +404,37 @@ fun PlayerScreen(
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        if (customView != null) {
-            AndroidView(
-                factory = {
-                    FrameLayout(it).apply {
-                        layoutParams = ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
-                        )
-                        addView(customView)
-                    }
-                },
-                modifier = Modifier.fillMaxSize()
-            )
-        } else {
-            when (currentEngine) {
-                PlayerEngine.EXO_PLAYER -> {
-                    if (exoPlayer != null) {
-                        AndroidView(
-                            factory = { ctx ->
-                                PlayerView(ctx).apply {
-                                    player = exoPlayer
-                                    layoutParams = ViewGroup.LayoutParams(
-                                        ViewGroup.LayoutParams.MATCH_PARENT,
-                                        ViewGroup.LayoutParams.MATCH_PARENT
-                                    )
-                                    useController = true
-                                    setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
-                                    setBackgroundColor(AndroidColor.BLACK)
-                                }
-                            },
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
+        when (currentEngine) {
+            PlayerEngine.EXO_PLAYER -> {
+                if (exoPlayer != null) {
+                    AndroidView(
+                        factory = { ctx ->
+                            PlayerView(ctx).apply {
+                                player = exoPlayer
+                                layoutParams = ViewGroup.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.MATCH_PARENT
+                                )
+                                useController = true
+                                setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                                setBackgroundColor(AndroidColor.BLACK)
+                            }
+                        },
+                        onRelease = { cleanupPlayback() },
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
+            }
 
-                PlayerEngine.WEB_EMBED -> {
+            PlayerEngine.WEB_EMBED -> {
+                if (webView != null) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         AndroidView(
-                            factory = { ctx ->
-                                WebView(ctx).apply {
-                                    webViewInstance = this
-                                    layoutParams = ViewGroup.LayoutParams(
-                                        ViewGroup.LayoutParams.MATCH_PARENT,
-                                        ViewGroup.LayoutParams.MATCH_PARENT
-                                    )
-                                    setBackgroundColor(AndroidColor.BLACK)
-                                    setLayerType(View.LAYER_TYPE_HARDWARE, null)
-
-                                    // Enable cookies & 3rd party cookies required by video CDN sessions
-                                    val currentWebView = this
-                                    CookieManager.getInstance().apply {
-                                        setAcceptCookie(true)
-                                        setAcceptThirdPartyCookies(currentWebView, true)
-                                    }
-
-                                    settings.apply {
-                                        javaScriptEnabled = true
-                                        domStorageEnabled = true
-                                        mediaPlaybackRequiresUserGesture = false
-                                        allowFileAccess = false
-                                        allowContentAccess = true
-                                        loadWithOverviewMode = true
-                                        useWideViewPort = true
-                                        mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                                        cacheMode = WebSettings.LOAD_DEFAULT
-                                        userAgentString =
-                                            "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
-                                    }
-
-                                    webViewClient = object : WebViewClient() {
-                                        override fun onPageFinished(view: WebView?, url: String?) {
-                                            super.onPageFinished(view, url)
-                                            isWebLoading = false
-                                        }
-
-                                        override fun shouldOverrideUrlLoading(
-                                            view: WebView?,
-                                            request: WebResourceRequest?
-                                        ): Boolean {
-                                            val reqUrl = request?.url ?: return false
-                                            val scheme = reqUrl.scheme?.lowercase() ?: ""
-                                            if (scheme != "http" && scheme != "https") {
-                                                // Block intent://, market://, app:// redirects from interrupting playback
-                                                return true
-                                            }
-                                            // Only intercept main frame navigation away from player
-                                            if (request.isForMainFrame) {
-                                                val host = reqUrl.host?.lowercase() ?: ""
-                                                if (host.contains("dailymotion.com") ||
-                                                    host.contains("dmcdn.net") ||
-                                                    host.contains("dmxleo.com") ||
-                                                    host.contains("mail.ru") ||
-                                                    host.contains("ok.ru") ||
-                                                    host.contains("vidshar") ||
-                                                    host.contains("qeseh") ||
-                                                    host.contains("qesen")
-                                                ) {
-                                                    return false
-                                                }
-                                                return true
-                                            }
-                                            return false
-                                        }
-                                    }
-
-                                    webChromeClient = object : WebChromeClient() {
-                                        override fun onShowCustomView(
-                                            view: View?,
-                                            callback: CustomViewCallback?
-                                        ) {
-                                            customView = view
-                                            customViewCallback = callback
-                                        }
-
-                                        override fun onHideCustomView() {
-                                            customView = null
-                                            customViewCallback = null
-                                        }
-                                    }
-
-                                    val dmId = extractDailymotionId(videoUrl)
-                                    if (dmId != null) {
-                                        val html = buildDailymotionHtml(dmId)
-                                        loadDataWithBaseURL("https://www.dailymotion.com/", html, "text/html", "UTF-8", null)
-                                    } else {
-                                        loadUrl(effectiveEmbedUrl)
-                                    }
-                                }
+                            factory = {
+                                (webView.parent as? ViewGroup)?.removeView(webView)
+                                webView
                             },
-                            onReset = { view ->
-                                view.stopLoading()
-                                view.onPause()
-                                view.loadUrl("about:blank")
-                            },
-                            onRelease = { view ->
-                                try {
-                                    view.stopLoading()
-                                    view.pauseTimers()
-                                    view.onPause()
-                                    view.loadUrl("about:blank")
-                                    view.clearHistory()
-                                    view.removeAllViews()
-                                    view.destroy()
-                                } catch (_: Exception) {}
-                                if (webViewInstance == view) {
-                                    webViewInstance = null
-                                }
-                            },
+                            onRelease = { cleanupPlayback() },
                             modifier = Modifier.fillMaxSize()
                         )
 
@@ -455,6 +455,23 @@ fun PlayerScreen(
                     }
                 }
             }
+        }
+
+        if (customView != null) {
+            AndroidView(
+                factory = { ctx ->
+                    FrameLayout(ctx).apply {
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                        setBackgroundColor(AndroidColor.BLACK)
+                        (customView?.parent as? ViewGroup)?.removeView(customView)
+                        addView(customView)
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
+            )
         }
 
         // Minimal floating controls: auto-hides after 3.5s so top bar is completely disabled during playback
@@ -516,3 +533,4 @@ fun PlayerScreen(
         }
     }
 }
+
