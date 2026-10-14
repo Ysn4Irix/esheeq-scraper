@@ -80,9 +80,9 @@ fun HomeScreen(
     var isCheckingUpdates by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        val result = AppUpdateManager.checkForUpdates(isManual = false)
+        val result = AppUpdateManager.checkForUpdates(forceCheck = true)
         result.getOrNull()?.let { info ->
-            if (info.isUpdateAvailable && !AppUpdateManager.isDismissedVersion(info.latestVersionName)) {
+            if (info.isUpdateAvailable) {
                 showUpdateDialog = true
             }
         }
@@ -104,7 +104,7 @@ fun HomeScreen(
                             } else {
                                 coroutineScope.launch {
                                     isCheckingUpdates = true
-                                    val res = AppUpdateManager.checkForUpdates(isManual = true)
+                                    val res = AppUpdateManager.checkForUpdates(forceCheck = true)
                                     isCheckingUpdates = false
                                     val info = res.getOrNull()
                                     if (info != null && info.isUpdateAvailable) {
@@ -311,7 +311,6 @@ fun HomeScreen(
                 AppUpdateManager.openBrowser(context, url)
             },
             onDismiss = {
-                AppUpdateManager.dismissVersion(latestUpdateInfo!!.latestVersionName)
                 showUpdateDialog = false
                 AppUpdateManager.resetDownloadState()
             }

@@ -65,13 +65,13 @@ object AppUpdateManager {
         }
     }
 
-    suspend fun checkForUpdates(isManual: Boolean = false): Result<UpdateInfo?> = withContext(Dispatchers.IO) {
+    suspend fun checkForUpdates(forceCheck: Boolean = true): Result<UpdateInfo?> = withContext(Dispatchers.IO) {
         try {
             val now = System.currentTimeMillis()
             val lastCheck = prefs.getLong(KEY_LAST_CHECK_TIME, 0L)
 
-            // If automatic check and checked recently, skip network
-            if (!isManual && (now - lastCheck < CHECK_INTERVAL_MS)) {
+            // If not forcing check, throttled within 10 min, and cached value is valid
+            if (!forceCheck && (now - lastCheck < 10 * 60 * 1000L) && _latestUpdateInfo.value != null) {
                 return@withContext Result.success(_latestUpdateInfo.value)
             }
 
