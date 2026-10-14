@@ -65,12 +65,15 @@ import com.esheeq.app.ui.theme.TerminalSurfaceElevated
 import com.esheeq.app.ui.theme.TerminalTextMuted
 import com.esheeq.app.ui.theme.TerminalTextPrimary
 
+import androidx.compose.foundation.layout.fillMaxHeight
+import com.esheeq.app.data.repository.PlaybackHistoryManager
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SeriesDetailScreen(
     seriesId: String,
     onBackClick: () -> Unit,
-    onNavigateToPlayer: (url: String, title: String) -> Unit,
+    onNavigateToPlayer: (url: String, title: String, seriesId: String, episode: String) -> Unit,
     viewModel: SeriesViewModel = viewModel(),
     modifier: Modifier = Modifier
 ) {
@@ -211,7 +214,7 @@ fun SeriesDetailScreen(
                             seriesTitle = series.title,
                             dailyLink = item,
                             onWatchClick = { url ->
-                                onNavigateToPlayer(url, "${series.title} - الحلقة ${item.episode}")
+                                onNavigateToPlayer(url, "${series.title} - الحلقة ${item.episode}", series.id, item.episode)
                             },
                             onCopyClick = { url ->
                                 copySingleLink(context, url)
@@ -404,105 +407,150 @@ private fun EpisodeRowItem(
     onWatchClick: (String) -> Unit,
     onCopyClick: (String) -> Unit
 ) {
+    val historyMap by PlaybackHistoryManager.historyState.collectAsState()
+    val watchProgress = dailyLink.link?.let { historyMap[it] }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(6.dp))
             .background(TerminalSurface)
-            .border(1.dp, TerminalBorder, RoundedCornerShape(6.dp))
-            .padding(horizontal = 14.dp, vertical = 10.dp)
+            .border(
+                1.dp,
+                if (watchProgress?.isCompleted == true) TerminalBlue.copy(alpha = 0.5f) else TerminalBorder,
+                RoundedCornerShape(6.dp)
+            )
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                StatusBadge(
-                    text = "حـ${dailyLink.episode}",
-                    style = BadgeStyle.SUCCESS
-                )
-
-                Spacer(modifier = Modifier.width(10.dp))
-
-                Text(
-                    text = "الحلقة ${dailyLink.episode}",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = TerminalTextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Watch CTA
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(TerminalEmerald)
-                        .clickable {
-                            val link = dailyLink.link ?: ""
-                            if (link.isNotBlank()) onWatchClick(link)
-                        }
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(15.dp)
-                        )
+                    StatusBadge(
+                        text = "حـ${dailyLink.episode}",
+                        style = if (watchProgress?.isCompleted == true) BadgeStyle.PRIMARY else BadgeStyle.SUCCESS
+                    )
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Column {
                         Text(
-                            text = "مشاهدة",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            text = "الحلقة ${dailyLink.episode}",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = TerminalTextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
+                        if (watchProgress != null && watchProgress.isCompleted) {
+                            Text(
+                                text = "✓ تمت المشاهدة",
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                                color = TerminalBlue
+                            )
+                        } else if (watchProgress != null && watchProgress.isResumeEligible) {
+                            val remaining = watchProgress.durationMs - watchProgress.positionMs
+                            Text(
+                                text = if (remaining > 0) "متبقي ${PlaybackHistoryManager.formatTime(remaining)}" else "تمت المشاهدة جزئياً",
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                                color = TerminalEmerald
+                            )
+                        }
                     }
                 }
 
-                // Copy CTA
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Watch CTA
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (watchProgress?.isResumeEligible == true) TerminalBlue else TerminalEmerald)
+                            .clickable {
+                                val link = dailyLink.link ?: ""
+                                if (link.isNotBlank()) onWatchClick(link)
+                            }
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Text(
+                                text = if (watchProgress?.isResumeEligible == true) "استئناف" else "مشاهدة",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+
+                    // Copy CTA
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(TerminalSurfaceElevated)
+                            .border(1.dp, TerminalBorder, RoundedCornerShape(6.dp))
+                            .clickable {
+                                val link = dailyLink.link ?: ""
+                                if (link.isNotBlank()) onCopyClick(link)
+                            }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = null,
+                                tint = TerminalBlue,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                text = "نسخ",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = TerminalBlue
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Slim progress bar along bottom
+            if (watchProgress != null && watchProgress.progressFraction > 0.03f) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(TerminalSurfaceElevated)
-                        .border(1.dp, TerminalBorder, RoundedCornerShape(6.dp))
-                        .clickable {
-                            val link = dailyLink.link ?: ""
-                            if (link.isNotBlank()) onCopyClick(link)
-                        }
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .background(TerminalBorder)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ContentCopy,
-                            contentDescription = null,
-                            tint = TerminalBlue,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Text(
-                            text = "نسخ",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = TerminalBlue
-                        )
-                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(watchProgress.progressFraction)
+                            .fillMaxHeight()
+                            .background(if (watchProgress.isCompleted) TerminalBlue else TerminalEmerald)
+                    )
                 }
             }
         }

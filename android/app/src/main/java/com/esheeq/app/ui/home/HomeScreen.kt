@@ -52,7 +52,7 @@ import com.esheeq.app.ui.theme.TerminalTextPrimary
 @Composable
 fun HomeScreen(
     onNavigateToSeries: (String) -> Unit,
-    onNavigateToPlayer: (url: String, title: String) -> Unit,
+    onNavigateToPlayer: (url: String, title: String, seriesId: String, episode: String) -> Unit,
     viewModel: HomeViewModel = viewModel(),
     modifier: Modifier = Modifier
 ) {
@@ -203,7 +203,7 @@ fun HomeScreen(
                             episode = episode,
                             onWatchClick = { ep ->
                                 val targetUrl = ep.streamLink ?: ep.url
-                                onNavigateToPlayer(targetUrl, ep.title)
+                                onNavigateToPlayer(targetUrl, ep.title, ep.id, ep.episode)
                             }
                         )
                     }

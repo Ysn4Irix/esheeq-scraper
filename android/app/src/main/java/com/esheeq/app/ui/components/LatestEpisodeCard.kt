@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
@@ -24,8 +25,11 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.esheeq.app.data.repository.PlaybackHistoryManager
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -54,6 +58,9 @@ fun LatestEpisodeCard(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val historyMap by PlaybackHistoryManager.historyState.collectAsState()
+    val targetUrl = episode.streamLink ?: episode.url
+    val watchProgress = historyMap[targetUrl]
 
     Box(
         modifier = modifier
@@ -102,7 +109,7 @@ fun LatestEpisodeCard(
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
-                            .padding(3.dp)
+                            .padding(bottom = if (watchProgress != null && watchProgress.progressFraction > 0.03f) 5.dp else 3.dp, end = 3.dp)
                             .clip(RoundedCornerShape(4.dp))
                             .background(Color(0xD90D1117))
                             .border(0.5.dp, TerminalEmerald.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
@@ -114,6 +121,24 @@ fun LatestEpisodeCard(
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             color = TerminalEmerald
+                        )
+                    }
+                }
+
+                // Progress bar along bottom of poster
+                if (watchProgress != null && watchProgress.progressFraction > 0.03f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(3.dp)
+                            .align(Alignment.BottomCenter)
+                            .background(Color.Black.copy(alpha = 0.6f))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(watchProgress.progressFraction)
+                                .fillMaxHeight()
+                                .background(if (watchProgress.isCompleted) TerminalBlue else TerminalEmerald)
                         )
                     }
                 }

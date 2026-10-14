@@ -18,14 +18,21 @@ import java.nio.charset.StandardCharsets
 object NavRoutes {
     const val HOME = "home"
     const val SERIES_DETAIL = "series/{seriesId}"
-    const val PLAYER = "player?url={url}&title={title}"
+    const val PLAYER = "player?url={url}&title={title}&seriesId={seriesId}&episode={episode}"
 
     fun seriesDetail(seriesId: String): String = "series/$seriesId"
 
-    fun player(url: String, title: String): String {
+    fun player(
+        url: String,
+        title: String,
+        seriesId: String = "",
+        episode: String = ""
+    ): String {
         val encodedUrl = URLEncoder.encode(url, StandardCharsets.UTF_8.toString())
         val encodedTitle = URLEncoder.encode(title, StandardCharsets.UTF_8.toString())
-        return "player?url=$encodedUrl&title=$encodedTitle"
+        val encodedSeriesId = URLEncoder.encode(seriesId, StandardCharsets.UTF_8.toString())
+        val encodedEpisode = URLEncoder.encode(episode, StandardCharsets.UTF_8.toString())
+        return "player?url=$encodedUrl&title=$encodedTitle&seriesId=$encodedSeriesId&episode=$encodedEpisode"
     }
 }
 
@@ -44,8 +51,8 @@ fun EsheeqNavGraph(
                 onNavigateToSeries = { seriesId ->
                     navController.navigate(NavRoutes.seriesDetail(seriesId))
                 },
-                onNavigateToPlayer = { url, title ->
-                    navController.navigate(NavRoutes.player(url, title))
+                onNavigateToPlayer = { url, title, seriesId, episode ->
+                    navController.navigate(NavRoutes.player(url, title, seriesId, episode))
                 }
             )
         }
@@ -60,8 +67,8 @@ fun EsheeqNavGraph(
             SeriesDetailScreen(
                 seriesId = seriesId,
                 onBackClick = { navController.popBackStack() },
-                onNavigateToPlayer = { url, title ->
-                    navController.navigate(NavRoutes.player(url, title))
+                onNavigateToPlayer = { url, title, sId, ep ->
+                    navController.navigate(NavRoutes.player(url, title, sId, ep))
                 }
             )
         }
@@ -70,18 +77,31 @@ fun EsheeqNavGraph(
             route = NavRoutes.PLAYER,
             arguments = listOf(
                 navArgument("url") { type = NavType.StringType; defaultValue = "" },
-                navArgument("title") { type = NavType.StringType; defaultValue = "" }
+                navArgument("title") { type = NavType.StringType; defaultValue = "" },
+                navArgument("seriesId") { type = NavType.StringType; defaultValue = "" },
+                navArgument("episode") { type = NavType.StringType; defaultValue = "" }
             )
         ) { backStackEntry ->
             val rawUrl = backStackEntry.arguments?.getString("url") ?: ""
             val rawTitle = backStackEntry.arguments?.getString("title") ?: ""
+            val rawSeriesId = backStackEntry.arguments?.getString("seriesId") ?: ""
+            val rawEpisode = backStackEntry.arguments?.getString("episode") ?: ""
             val decodedUrl = URLDecoder.decode(rawUrl, StandardCharsets.UTF_8.toString())
             val decodedTitle = URLDecoder.decode(rawTitle, StandardCharsets.UTF_8.toString())
+            val decodedSeriesId = URLDecoder.decode(rawSeriesId, StandardCharsets.UTF_8.toString())
+            val decodedEpisode = URLDecoder.decode(rawEpisode, StandardCharsets.UTF_8.toString())
 
             PlayerScreen(
                 videoUrl = decodedUrl,
                 title = decodedTitle,
-                onBackClick = { navController.popBackStack() }
+                seriesId = decodedSeriesId.ifBlank { null },
+                currentEpisode = decodedEpisode.ifBlank { null },
+                onBackClick = { navController.popBackStack() },
+                onNavigateToEpisode = { nextUrl, nextTitle, nextEpisode ->
+                    navController.navigate(NavRoutes.player(nextUrl, nextTitle, decodedSeriesId, nextEpisode)) {
+                        popUpTo(NavRoutes.PLAYER) { inclusive = true }
+                    }
+                }
             )
         }
     }

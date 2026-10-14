@@ -3,7 +3,9 @@ package com.esheeq.app.ui.player
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.PictureInPictureParams
+import android.content.Context
 import android.graphics.Color as AndroidColor
+import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
 import android.util.Rational
@@ -11,6 +13,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.webkit.CookieManager
+import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -20,27 +23,47 @@ import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.BrightnessMedium
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.PictureInPictureAlt
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -49,8 +72,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -63,9 +91,16 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.esheeq.app.MainActivity
+import com.esheeq.app.data.model.DailyLink
+import com.esheeq.app.data.model.SeriesDetails
+import com.esheeq.app.data.repository.PlaybackHistoryManager
+import com.esheeq.app.data.repository.SeriesRepository
 import com.esheeq.app.ui.theme.TerminalBg
+import com.esheeq.app.ui.theme.TerminalBlue
+import com.esheeq.app.ui.theme.TerminalBorder
 import com.esheeq.app.ui.theme.TerminalEmerald
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 enum class PlayerEngine {
     EXO_PLAYER,
@@ -90,9 +125,10 @@ fun extractDailymotionId(rawUrl: String): String? {
 }
 
 /**
- * Builds responsive HTML embedding Dailymotion iframe with proper referrer origin.
+ * Builds responsive HTML embedding Dailymotion iframe with postMessage listener.
  */
-fun buildDailymotionHtml(videoId: String): String {
+fun buildDailymotionHtml(videoId: String, startSeconds: Long = 0L): String {
+    val startParam = if (startSeconds > 0) "&start=$startSeconds" else ""
     return """
         <!DOCTYPE html>
         <html>
@@ -106,10 +142,31 @@ fun buildDailymotionHtml(videoId: String): String {
         </head>
         <body>
           <iframe
-            src="https://www.dailymotion.com/embed/video/$videoId?autoplay=1&ui-logo=0&ui-start-screen-info=0"
+            id="dm_player"
+            src="https://www.dailymotion.com/embed/video/$videoId?autoplay=1&ui-logo=0&ui-start-screen-info=0$startParam"
             allow="autoplay; fullscreen; picture-in-picture; web-share"
             allowfullscreen>
           </iframe>
+          <script>
+            window.addEventListener('message', function(e) {
+                try {
+                    var data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+                    if (data && data.event === 'timeupdate') {
+                        var cur = Math.floor((data.time || 0) * 1000);
+                        var dur = Math.floor((data.duration || 0) * 1000);
+                        if (window.AndroidBridge && cur > 0) {
+                            window.AndroidBridge.onTimeUpdate(cur, dur);
+                        }
+                    }
+                } catch(err) {}
+            });
+            setInterval(function() {
+                var v = document.querySelector('video');
+                if (v && !v.paused && v.duration > 0 && window.AndroidBridge) {
+                    window.AndroidBridge.onTimeUpdate(Math.floor(v.currentTime * 1000), Math.floor(v.duration * 1000));
+                }
+            }, 1500);
+          </script>
         </body>
         </html>
     """.trimIndent()
@@ -126,7 +183,6 @@ fun formatStreamEmbedUrl(rawUrl: String): String {
         return "https://www.dailymotion.com/embed/video/$dmId?autoplay=1&ui-logo=0&ui-start-screen-info=0"
     }
 
-    // OK.ru: convert video URL to embed
     val okMatch = Regex("""ok\.ru/video(?:embed)?/([0-9]+)""").find(trimmed)
     if (okMatch != null) {
         val id = okMatch.groupValues[1]
@@ -142,22 +198,14 @@ fun formatStreamEmbedUrl(rawUrl: String): String {
 fun PlayerScreen(
     videoUrl: String,
     title: String,
+    seriesId: String? = null,
+    currentEpisode: String? = null,
     onBackClick: () -> Unit,
+    onNavigateToEpisode: ((nextUrl: String, nextTitle: String, nextEpisode: String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
-
-    val isDirectMedia = videoUrl.contains(".m3u8", ignoreCase = true) ||
-            videoUrl.contains(".mp4", ignoreCase = true)
-
-    val currentEngine = remember(videoUrl) {
-        if (isDirectMedia) PlayerEngine.EXO_PLAYER else PlayerEngine.WEB_EMBED
-    }
-
-    val effectiveEmbedUrl = remember(videoUrl) {
-        formatStreamEmbedUrl(videoUrl)
-    }
 
     // Immersive mode: hide status bar, navigation bar, and bottom area for true edge-to-edge playback
     DisposableEffect(activity) {
@@ -207,17 +255,107 @@ fun PlayerScreen(
         }
     }
 
+    val isDirectMedia = videoUrl.contains(".m3u8", ignoreCase = true) ||
+            videoUrl.contains(".mp4", ignoreCase = true)
+
+    val currentEngine = remember(videoUrl) {
+        if (isDirectMedia) PlayerEngine.EXO_PLAYER else PlayerEngine.WEB_EMBED
+    }
+
+    val effectiveEmbedUrl = remember(videoUrl) {
+        formatStreamEmbedUrl(videoUrl)
+    }
+
+    // Resume Watching State
+    val initialProgress = remember(videoUrl) {
+        PlaybackHistoryManager.getProgress(videoUrl)
+    }
+    var resumeToastTime by remember { mutableStateOf<String?>(null) }
+    var showResumeToast by remember { mutableStateOf(false) }
+
+    LaunchedEffect(videoUrl) {
+        if (initialProgress != null && initialProgress.isResumeEligible) {
+            resumeToastTime = PlaybackHistoryManager.formatTime(initialProgress.positionMs)
+            showResumeToast = true
+        }
+    }
+
+    LaunchedEffect(showResumeToast) {
+        if (showResumeToast) {
+            delay(4500)
+            showResumeToast = false
+        }
+    }
+
+    // Lock Mode State
+    var isLocked by remember { mutableStateOf(false) }
+    var showUnlockPill by remember { mutableStateOf(false) }
+
+    LaunchedEffect(showUnlockPill) {
+        if (showUnlockPill) {
+            delay(3500)
+            showUnlockPill = false
+        }
+    }
+
+    // Gesture Controls State
+    var gestureIndicatorType by remember { mutableStateOf<String?>(null) } // "brightness", "volume"
+    var gestureIndicatorValue by remember { mutableIntStateOf(0) }
+    var doubleTapSeekText by remember { mutableStateOf<String?>(null) }
+    var doubleTapSeekSide by remember { mutableStateOf<String?>(null) } // "left", "right"
+
+    LaunchedEffect(doubleTapSeekText) {
+        if (doubleTapSeekText != null) {
+            delay(700)
+            doubleTapSeekText = null
+            doubleTapSeekSide = null
+        }
+    }
+
     var customView by remember { mutableStateOf<View?>(null) }
     var customViewCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
     var isWebLoading by remember { mutableStateOf(true) }
 
-    // ExoPlayer Instance: Only initialize when currentEngine is EXO_PLAYER
+    // Next / Previous Episodes resolution
+    var seriesDetails by remember { mutableStateOf<SeriesDetails?>(null) }
+    var previousEpisode by remember { mutableStateOf<DailyLink?>(null) }
+    var nextEpisode by remember { mutableStateOf<DailyLink?>(null) }
+
+    LaunchedEffect(seriesId) {
+        if (!seriesId.isNullOrBlank()) {
+            try {
+                val result = SeriesRepository().getSeriesDetails(seriesId)
+                if (result.isSuccess) {
+                    val details = result.getOrNull()
+                    seriesDetails = details
+                    if (details != null && details.dailyLinks.isNotEmpty()) {
+                        val currentIndex = details.dailyLinks.indexOfFirst {
+                            it.link == videoUrl || it.episode == currentEpisode
+                        }
+                        if (currentIndex != -1) {
+                            if (currentIndex > 0) {
+                                previousEpisode = details.dailyLinks[currentIndex - 1]
+                            }
+                            if (currentIndex < details.dailyLinks.size - 1) {
+                                nextEpisode = details.dailyLinks[currentIndex + 1]
+                            }
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
+    // ExoPlayer Instance
     val exoPlayer = remember(context, videoUrl, currentEngine) {
         if (currentEngine == PlayerEngine.EXO_PLAYER) {
             ExoPlayer.Builder(context).build().apply {
                 val mediaItem = MediaItem.fromUri(videoUrl)
                 setMediaItem(mediaItem)
                 prepare()
+                if (initialProgress != null && initialProgress.isResumeEligible) {
+                    seekTo(initialProgress.positionMs)
+                }
                 playWhenReady = true
             }
         } else {
@@ -225,7 +363,28 @@ fun PlayerScreen(
         }
     }
 
-    // WebView Instance: Only initialize when currentEngine is WEB_EMBED
+    // Periodic progress saving for ExoPlayer
+    LaunchedEffect(exoPlayer, videoUrl) {
+        while (isActive) {
+            delay(1500)
+            if (exoPlayer != null && exoPlayer.isPlaying) {
+                val pos = exoPlayer.currentPosition
+                val dur = exoPlayer.duration
+                if (dur > 0 && pos > 0) {
+                    PlaybackHistoryManager.saveProgress(
+                        url = videoUrl,
+                        positionMs = pos,
+                        durationMs = dur,
+                        seriesId = seriesId,
+                        episodeNumber = currentEpisode,
+                        title = title
+                    )
+                }
+            }
+        }
+    }
+
+    // WebView Instance
     val webView = remember(context, videoUrl, currentEngine) {
         if (currentEngine == PlayerEngine.WEB_EMBED) {
             WebView(context).apply {
@@ -255,6 +414,23 @@ fun PlayerScreen(
                     userAgentString =
                         "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
                 }
+
+                class WebAppBridge {
+                    @JavascriptInterface
+                    fun onTimeUpdate(positionMs: Long, durationMs: Long) {
+                        if (positionMs > 0) {
+                            PlaybackHistoryManager.saveProgress(
+                                url = videoUrl,
+                                positionMs = positionMs,
+                                durationMs = durationMs,
+                                seriesId = seriesId,
+                                episodeNumber = currentEpisode,
+                                title = title
+                            )
+                        }
+                    }
+                }
+                addJavascriptInterface(WebAppBridge(), "AndroidBridge")
 
                 webViewClient = object : WebViewClient() {
                     override fun onPageFinished(view: WebView?, url: String?) {
@@ -320,8 +496,12 @@ fun PlayerScreen(
                 }
 
                 val dmId = extractDailymotionId(videoUrl)
+                val resumeSec = if (initialProgress != null && initialProgress.isResumeEligible) {
+                    initialProgress.positionMs / 1000
+                } else 0L
+
                 if (dmId != null) {
-                    val html = buildDailymotionHtml(dmId)
+                    val html = buildDailymotionHtml(dmId, resumeSec)
                     loadDataWithBaseURL("https://www.dailymotion.com/", html, "text/html", "UTF-8", null)
                 } else {
                     loadUrl(effectiveEmbedUrl)
@@ -332,18 +512,52 @@ fun PlayerScreen(
         }
     }
 
+    // Seek helper for double-tap seek
+    fun seekRelative(deltaMs: Long) {
+        if (currentEngine == PlayerEngine.EXO_PLAYER && exoPlayer != null) {
+            val cur = exoPlayer.currentPosition
+            val dur = exoPlayer.duration
+            val target = (cur + deltaMs).coerceIn(0L, if (dur > 0) dur else Long.MAX_VALUE)
+            exoPlayer.seekTo(target)
+        } else if (currentEngine == PlayerEngine.WEB_EMBED && webView != null) {
+            val deltaSec = deltaMs / 1000
+            val js = """
+                (function() {
+                    var v = document.querySelector('video');
+                    if (v) {
+                        v.currentTime = Math.max(0, v.currentTime + ($deltaSec));
+                    }
+                })();
+            """.trimIndent()
+            webView.evaluateJavascript(js, null)
+        }
+    }
+
     var isCleanedUp by remember { mutableStateOf(false) }
 
-    // Comprehensive cleanup for both ExoPlayer and WebView engines
     val cleanupPlayback: () -> Unit = remember(exoPlayer, webView) {
         {
             if (!isCleanedUp) {
                 isCleanedUp = true
 
                 try {
-                    exoPlayer?.stop()
-                    exoPlayer?.clearMediaItems()
-                    exoPlayer?.release()
+                    if (exoPlayer != null) {
+                        val pos = exoPlayer.currentPosition
+                        val dur = exoPlayer.duration
+                        if (dur > 0 && pos > 0) {
+                            PlaybackHistoryManager.saveProgress(
+                                url = videoUrl,
+                                positionMs = pos,
+                                durationMs = dur,
+                                seriesId = seriesId,
+                                episodeNumber = currentEpisode,
+                                title = title
+                            )
+                        }
+                        exoPlayer.stop()
+                        exoPlayer.clearMediaItems()
+                        exoPlayer.release()
+                    }
                 } catch (_: Exception) {}
 
                 try {
@@ -408,14 +622,12 @@ fun PlayerScreen(
         }
     }
 
-    // Terminate playback when composable leaves composition (navigation away)
     DisposableEffect(Unit) {
         onDispose {
             cleanupPlayback()
         }
     }
 
-    // Pause audio/video on app minimize/lock unless in Picture-in-Picture
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, cleanupPlayback) {
         val observer = LifecycleEventObserver { _, event ->
@@ -463,7 +675,9 @@ fun PlayerScreen(
     }
 
     BackHandler {
-        if (customView != null) {
+        if (isLocked) {
+            showUnlockPill = true
+        } else if (customView != null) {
             try {
                 (customView?.parent as? ViewGroup)?.removeView(customView)
                 customViewCallback?.onCustomViewHidden()
@@ -480,7 +694,6 @@ fun PlayerScreen(
         }
     }
 
-    // Minimal floating controls: auto-hides after 3.5s so top bar is completely disabled during playback
     var showFloatingControls by remember { mutableStateOf(true) }
     LaunchedEffect(showFloatingControls) {
         if (showFloatingControls) {
@@ -493,15 +706,74 @@ fun PlayerScreen(
         modifier = modifier
             .fillMaxSize()
             .background(Color.Black)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) {
-                showFloatingControls = !showFloatingControls
-                activity?.window?.let { win ->
-                    val insets = WindowCompat.getInsetsController(win, win.decorView)
-                    insets.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                    insets.hide(WindowInsetsCompat.Type.systemBars())
+            .pointerInput(isLocked) {
+                detectTapGestures(
+                    onDoubleTap = { offset ->
+                        if (!isLocked) {
+                            val w = size.width
+                            if (offset.x < w * 0.38f) {
+                                seekRelative(-10_000L)
+                                doubleTapSeekSide = "left"
+                                doubleTapSeekText = "-10 ث"
+                            } else if (offset.x > w * 0.62f) {
+                                seekRelative(10_000L)
+                                doubleTapSeekSide = "right"
+                                doubleTapSeekText = "+10 ث"
+                            }
+                        }
+                    },
+                    onTap = {
+                        if (isLocked) {
+                            showUnlockPill = true
+                        } else {
+                            showFloatingControls = !showFloatingControls
+                        }
+                    }
+                )
+            }
+            .pointerInput(isLocked) {
+                if (!isLocked) {
+                    detectVerticalDragGestures(
+                        onDragStart = { offset ->
+                            val w = size.width
+                            if (offset.x < w * 0.45f) {
+                                gestureIndicatorType = "brightness"
+                            } else if (offset.x > w * 0.55f) {
+                                gestureIndicatorType = "volume"
+                            }
+                        },
+                        onDragEnd = {
+                            gestureIndicatorType = null
+                        },
+                        onDragCancel = {
+                            gestureIndicatorType = null
+                        },
+                        onVerticalDrag = { change, dragAmount ->
+                            change.consume()
+                            val h = size.height.toFloat()
+                            val delta = -dragAmount / h
+                            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+                            if (gestureIndicatorType == "brightness" && activity != null) {
+                                val current = activity.window.attributes.screenBrightness.let {
+                                    if (it < 0f) 0.5f else it
+                                }
+                                val newBrightness = (current + delta).coerceIn(0.01f, 1f)
+                                val params = activity.window.attributes
+                                params.screenBrightness = newBrightness
+                                activity.window.attributes = params
+                                gestureIndicatorValue = (newBrightness * 100).toInt()
+                            } else if (gestureIndicatorType == "volume" && audioManager != null) {
+                                val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                                val cur = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                                val step = (delta * max * 1.5f).toInt()
+                                if (step != 0) {
+                                    val newVol = (cur + step).coerceIn(0, max)
+                                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
+                                    gestureIndicatorValue = (newVol * 100 / max.coerceAtLeast(1))
+                                }
+                            }
+                        }
+                    )
                 }
             }
     ) {
@@ -575,7 +847,180 @@ fun PlayerScreen(
             )
         }
 
-        if (showFloatingControls) {
+        // Double-Tap Seek Visual Badges
+        if (doubleTapSeekText != null && doubleTapSeekSide == "left") {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 40.dp)
+                    .clip(CircleShape)
+                    .background(Color(0x99000000))
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.FastRewind,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(26.dp)
+                    )
+                    Text(
+                        text = doubleTapSeekText ?: "",
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            }
+        }
+
+        if (doubleTapSeekText != null && doubleTapSeekSide == "right") {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 40.dp)
+                    .clip(CircleShape)
+                    .background(Color(0x99000000))
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.FastForward,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(26.dp)
+                    )
+                    Text(
+                        text = doubleTapSeekText ?: "",
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            }
+        }
+
+        // Gesture HUD (Brightness or Volume indicator in center)
+        if (gestureIndicatorType != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color(0xD90D1117))
+                    .border(1.dp, TerminalBorder, RoundedCornerShape(14.dp))
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        imageVector = if (gestureIndicatorType == "brightness") Icons.Default.BrightnessMedium else Icons.AutoMirrored.Filled.VolumeUp,
+                        contentDescription = null,
+                        tint = TerminalEmerald,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = "$gestureIndicatorValue%",
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            }
+        }
+
+        // Unlock Pill (Displayed when locked upon any tap)
+        if (isLocked && showUnlockPill) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(top = 16.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xEB0D1117))
+                    .border(1.dp, TerminalEmerald.copy(alpha = 0.8f), RoundedCornerShape(20.dp))
+                    .clickable {
+                        isLocked = false
+                        showUnlockPill = false
+                        showFloatingControls = true
+                    }
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.LockOpen,
+                        contentDescription = "إلغاء القفل",
+                        tint = TerminalEmerald,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "القفل مفعّل (انقر لفتح الشاشة)",
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            }
+        }
+
+        // Resume Toast Pill
+        if (showResumeToast && !resumeToastTime.isNullOrBlank()) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 24.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xE60D1117))
+                    .border(1.dp, TerminalEmerald.copy(alpha = 0.7f), RoundedCornerShape(20.dp))
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "تم الاستئناف من $resumeToastTime",
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 12.sp,
+                        color = Color.White
+                    )
+                    Text(
+                        text = "البدء من البداية",
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TerminalEmerald,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .clickable {
+                                PlaybackHistoryManager.resetToBeginning(videoUrl)
+                                if (currentEngine == PlayerEngine.EXO_PLAYER) {
+                                    exoPlayer?.seekTo(0L)
+                                } else if (currentEngine == PlayerEngine.WEB_EMBED) {
+                                    webView?.evaluateJavascript(
+                                        "(function(){ var v=document.querySelector('video'); if(v) v.currentTime=0; })();",
+                                        null
+                                    )
+                                }
+                                showResumeToast = false
+                            }
+                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                    )
+                }
+            }
+        }
+
+        // Floating controls (Auto-hides after 3.5s; hidden when locked)
+        if (!isLocked && showFloatingControls) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -585,6 +1030,7 @@ fun PlayerScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Back Button
                 IconButton(
                     onClick = safelyNavigateBack,
                     modifier = Modifier
@@ -600,15 +1046,90 @@ fun PlayerScreen(
                     )
                 }
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && activity != null) {
+                // Title in Center
+                Text(
+                    text = title,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 12.dp)
+                )
+
+                // Controls action row
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Previous Episode Shortcut
+                    if (previousEpisode != null && onNavigateToEpisode != null) {
+                        IconButton(
+                            onClick = {
+                                previousEpisode?.let { prev ->
+                                    val url = prev.link
+                                    if (!url.isNullOrBlank()) {
+                                        cleanupPlayback()
+                                        onNavigateToEpisode(
+                                            url,
+                                            "${seriesDetails?.title ?: title} - الحلقة ${prev.episode}",
+                                            prev.episode
+                                        )
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(Color(0x80000000))
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SkipPrevious,
+                                contentDescription = "الحلقة السابقة",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    // Next Episode Shortcut
+                    if (nextEpisode != null && onNavigateToEpisode != null) {
+                        IconButton(
+                            onClick = {
+                                nextEpisode?.let { nxt ->
+                                    val url = nxt.link
+                                    if (!url.isNullOrBlank()) {
+                                        cleanupPlayback()
+                                        onNavigateToEpisode(
+                                            url,
+                                            "${seriesDetails?.title ?: title} - الحلقة ${nxt.episode}",
+                                            nxt.episode
+                                        )
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(Color(0x80000000))
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SkipNext,
+                                contentDescription = "الحلقة التالية",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    // Screen Lock Button
                     IconButton(
                         onClick = {
-                            try {
-                                val pipParams = PictureInPictureParams.Builder()
-                                    .setAspectRatio(Rational(16, 9))
-                                    .build()
-                                activity.enterPictureInPictureMode(pipParams)
-                            } catch (_: Exception) {}
+                            isLocked = true
+                            showFloatingControls = false
+                            showUnlockPill = true
                         },
                         modifier = Modifier
                             .size(38.dp)
@@ -616,15 +1137,39 @@ fun PlayerScreen(
                             .background(Color(0x80000000))
                     ) {
                         Icon(
-                            imageVector = Icons.Default.PictureInPictureAlt,
-                            contentDescription = "صورة داخل صورة",
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = "قفل الشاشة",
                             tint = Color.White,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(19.dp)
                         )
+                    }
+
+                    // Picture-in-Picture Button
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && activity != null) {
+                        IconButton(
+                            onClick = {
+                                try {
+                                    val pipParams = PictureInPictureParams.Builder()
+                                        .setAspectRatio(Rational(16, 9))
+                                        .build()
+                                    activity.enterPictureInPictureMode(pipParams)
+                                } catch (_: Exception) {}
+                            },
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(Color(0x80000000))
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PictureInPictureAlt,
+                                contentDescription = "صورة داخل صورة",
+                                tint = Color.White,
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
-
