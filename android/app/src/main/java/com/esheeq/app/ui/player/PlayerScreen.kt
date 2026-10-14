@@ -9,6 +9,8 @@ import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
 import android.util.Rational
+import android.view.GestureDetector
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -295,6 +297,15 @@ fun PlayerScreen(
         if (showUnlockPill) {
             delay(3500)
             showUnlockPill = false
+        }
+    }
+
+    // Floating Controls Visibility (Auto-hides after 5s)
+    var showFloatingControls by remember { mutableStateOf(true) }
+    LaunchedEffect(showFloatingControls) {
+        if (showFloatingControls) {
+            delay(5000)
+            showFloatingControls = false
         }
     }
 
@@ -694,88 +705,10 @@ fun PlayerScreen(
         }
     }
 
-    var showFloatingControls by remember { mutableStateOf(true) }
-    LaunchedEffect(showFloatingControls) {
-        if (showFloatingControls) {
-            delay(3500)
-            showFloatingControls = false
-        }
-    }
-
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(Color.Black)
-            .pointerInput(isLocked) {
-                detectTapGestures(
-                    onDoubleTap = { offset ->
-                        if (!isLocked) {
-                            val w = size.width
-                            if (offset.x < w * 0.38f) {
-                                seekRelative(-10_000L)
-                                doubleTapSeekSide = "left"
-                                doubleTapSeekText = "-10 ث"
-                            } else if (offset.x > w * 0.62f) {
-                                seekRelative(10_000L)
-                                doubleTapSeekSide = "right"
-                                doubleTapSeekText = "+10 ث"
-                            }
-                        }
-                    },
-                    onTap = {
-                        if (isLocked) {
-                            showUnlockPill = true
-                        } else {
-                            showFloatingControls = !showFloatingControls
-                        }
-                    }
-                )
-            }
-            .pointerInput(isLocked) {
-                if (!isLocked) {
-                    detectVerticalDragGestures(
-                        onDragStart = { offset ->
-                            val w = size.width
-                            if (offset.x < w * 0.45f) {
-                                gestureIndicatorType = "brightness"
-                            } else if (offset.x > w * 0.55f) {
-                                gestureIndicatorType = "volume"
-                            }
-                        },
-                        onDragEnd = {
-                            gestureIndicatorType = null
-                        },
-                        onDragCancel = {
-                            gestureIndicatorType = null
-                        },
-                        onVerticalDrag = { change, dragAmount ->
-                            change.consume()
-                            val h = size.height.toFloat()
-                            val delta = -dragAmount / h
-                            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
-                            if (gestureIndicatorType == "brightness" && activity != null) {
-                                val current = activity.window.attributes.screenBrightness.let {
-                                    if (it < 0f) 0.5f else it
-                                }
-                                val newBrightness = (current + delta).coerceIn(0.01f, 1f)
-                                val params = activity.window.attributes
-                                params.screenBrightness = newBrightness
-                                activity.window.attributes = params
-                                gestureIndicatorValue = (newBrightness * 100).toInt()
-                            } else if (gestureIndicatorType == "volume" && audioManager != null) {
-                                val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-                                val cur = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-                                val step = (delta * max * 1.5f).toInt()
-                                if (step != 0) {
-                                    val newVol = (cur + step).coerceIn(0, max)
-                                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
-                                    gestureIndicatorValue = (newVol * 100 / max.coerceAtLeast(1))
-                                }
-                            }
-                        }
-                    )
-                }
-            }
     ) {
         when (currentEngine) {
             PlayerEngine.EXO_PLAYER -> {
@@ -791,6 +724,31 @@ fun PlayerScreen(
                                 useController = true
                                 setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
                                 setBackgroundColor(AndroidColor.BLACK)
+                                val exoGestureDetector = GestureDetector(ctx, object : GestureDetector.SimpleOnGestureListener() {
+                                    override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+                                        showFloatingControls = !showFloatingControls
+                                        return false
+                                    }
+                                    override fun onDoubleTap(e: MotionEvent): Boolean {
+                                        val w = width.toFloat()
+                                        if (e.x < w * 0.35f) {
+                                            seekRelative(-10_000L)
+                                            doubleTapSeekSide = "left"
+                                            doubleTapSeekText = "-10 ث"
+                                            return true
+                                        } else if (e.x > w * 0.65f) {
+                                            seekRelative(10_000L)
+                                            doubleTapSeekSide = "right"
+                                            doubleTapSeekText = "+10 ث"
+                                            return true
+                                        }
+                                        return false
+                                    }
+                                })
+                                setOnTouchListener { _, event ->
+                                    exoGestureDetector.onTouchEvent(event)
+                                    false
+                                }
                             }
                         },
                         onRelease = { cleanupPlayback() },
@@ -805,6 +763,31 @@ fun PlayerScreen(
                         AndroidView(
                             factory = {
                                 (webView.parent as? ViewGroup)?.removeView(webView)
+                                val webGestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+                                    override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+                                        showFloatingControls = !showFloatingControls
+                                        return false
+                                    }
+                                    override fun onDoubleTap(e: MotionEvent): Boolean {
+                                        val w = webView.width.toFloat()
+                                        if (e.x < w * 0.35f) {
+                                            seekRelative(-10_000L)
+                                            doubleTapSeekSide = "left"
+                                            doubleTapSeekText = "-10 ث"
+                                            return true
+                                        } else if (e.x > w * 0.65f) {
+                                            seekRelative(10_000L)
+                                            doubleTapSeekSide = "right"
+                                            doubleTapSeekText = "+10 ث"
+                                            return true
+                                        }
+                                        return false
+                                    }
+                                })
+                                webView.setOnTouchListener { _, event ->
+                                    webGestureDetector.onTouchEvent(event)
+                                    false
+                                }
                                 webView
                             },
                             onRelease = { cleanupPlayback() },
@@ -844,6 +827,85 @@ fun PlayerScreen(
                     }
                 },
                 modifier = Modifier.fillMaxSize()
+            )
+        }
+
+        // Left Edge Gesture Zone: Vertical drag adjusts Brightness (outer 18% margin only)
+        if (!isLocked) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .fillMaxHeight()
+                    .fillMaxWidth(0.18f)
+                    .pointerInput(Unit) {
+                        detectVerticalDragGestures(
+                            onDragStart = { gestureIndicatorType = "brightness" },
+                            onDragEnd = { gestureIndicatorType = null },
+                            onDragCancel = { gestureIndicatorType = null },
+                            onVerticalDrag = { change, dragAmount ->
+                                change.consume()
+                                val h = size.height.toFloat()
+                                val delta = -dragAmount / h
+                                if (activity != null) {
+                                    val current = activity.window.attributes.screenBrightness.let {
+                                        if (it < 0f) 0.5f else it
+                                    }
+                                    val newBrightness = (current + delta).coerceIn(0.01f, 1f)
+                                    val params = activity.window.attributes
+                                    params.screenBrightness = newBrightness
+                                    activity.window.attributes = params
+                                    gestureIndicatorValue = (newBrightness * 100).toInt()
+                                }
+                            }
+                        )
+                    }
+            )
+        }
+
+        // Right Edge Gesture Zone: Vertical drag adjusts Volume (outer 18% margin only)
+        if (!isLocked) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .fillMaxHeight()
+                    .fillMaxWidth(0.18f)
+                    .pointerInput(Unit) {
+                        detectVerticalDragGestures(
+                            onDragStart = { gestureIndicatorType = "volume" },
+                            onDragEnd = { gestureIndicatorType = null },
+                            onDragCancel = { gestureIndicatorType = null },
+                            onVerticalDrag = { change, dragAmount ->
+                                change.consume()
+                                val h = size.height.toFloat()
+                                val delta = -dragAmount / h
+                                val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+                                if (audioManager != null) {
+                                    val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                                    val cur = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                                    val step = (delta * max * 1.5f).toInt()
+                                    if (step != 0) {
+                                        val newVol = (cur + step).coerceIn(0, max)
+                                        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
+                                        gestureIndicatorValue = (newVol * 100 / max.coerceAtLeast(1))
+                                    }
+                                }
+                            }
+                        )
+                    }
+            )
+        }
+
+        // Fullscreen touch barrier when locked
+        if (isLocked) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Transparent)
+                    .pointerInput(Unit) {
+                        detectTapGestures {
+                            showUnlockPill = true
+                        }
+                    }
             )
         }
 
@@ -1169,6 +1231,27 @@ fun PlayerScreen(
                         }
                     }
                 }
+            }
+        }
+
+        // Subtle persistent Back button when controls are hidden so the user is never trapped
+        if (!isLocked && !showFloatingControls) {
+            IconButton(
+                onClick = safelyNavigateBack,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .statusBarsPadding()
+                    .padding(start = 14.dp, top = 10.dp)
+                    .size(38.dp)
+                    .clip(CircleShape)
+                    .background(Color(0x66000000))
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "الرجوع",
+                    tint = Color.White.copy(alpha = 0.85f),
+                    modifier = Modifier.size(19.dp)
+                )
             }
         }
     }
