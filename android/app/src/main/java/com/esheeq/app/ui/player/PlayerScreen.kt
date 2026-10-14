@@ -9,6 +9,7 @@ import android.os.Build
 import android.util.Rational
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -19,6 +20,8 @@ import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -45,9 +48,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -56,6 +63,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.esheeq.app.MainActivity
+import com.esheeq.app.ui.theme.TerminalBg
 import com.esheeq.app.ui.theme.TerminalEmerald
 import kotlinx.coroutines.delay
 
@@ -151,6 +159,54 @@ fun PlayerScreen(
         formatStreamEmbedUrl(videoUrl)
     }
 
+    // Immersive mode: hide status bar, navigation bar, and bottom area for true edge-to-edge playback
+    DisposableEffect(activity) {
+        val window = activity?.window
+        val insetsController = if (window != null) {
+            WindowCompat.getInsetsController(window, window.decorView)
+        } else null
+
+        val originalCutoutMode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && window != null) {
+            val prev = window.attributes.layoutInDisplayCutoutMode
+            val params = window.attributes
+            params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            window.attributes = params
+            prev
+        } else 0
+
+        window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        @Suppress("DEPRECATION")
+        window?.statusBarColor = AndroidColor.TRANSPARENT
+        @Suppress("DEPRECATION")
+        window?.navigationBarColor = AndroidColor.TRANSPARENT
+
+        insetsController?.apply {
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            hide(WindowInsetsCompat.Type.systemBars())
+        }
+
+        onDispose {
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && window != null) {
+                val params = window.attributes
+                params.layoutInDisplayCutoutMode = originalCutoutMode
+                window.attributes = params
+            }
+
+            @Suppress("DEPRECATION")
+            window?.statusBarColor = TerminalBg.toArgb()
+            @Suppress("DEPRECATION")
+            window?.navigationBarColor = TerminalBg.toArgb()
+
+            insetsController?.apply {
+                systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+                show(WindowInsetsCompat.Type.systemBars())
+            }
+        }
+    }
+
     var customView by remember { mutableStateOf<View?>(null) }
     var customViewCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
     var isWebLoading by remember { mutableStateOf(true) }
@@ -241,6 +297,11 @@ fun PlayerScreen(
                     ) {
                         customView = view
                         customViewCallback = callback
+                        activity?.window?.let { win ->
+                            val insets = WindowCompat.getInsetsController(win, win.decorView)
+                            insets.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                            insets.hide(WindowInsetsCompat.Type.systemBars())
+                        }
                     }
 
                     override fun onHideCustomView() {
@@ -250,6 +311,11 @@ fun PlayerScreen(
                         } catch (_: Exception) {}
                         customView = null
                         customViewCallback = null
+                        activity?.window?.let { win ->
+                            val insets = WindowCompat.getInsetsController(win, win.decorView)
+                            insets.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                            insets.hide(WindowInsetsCompat.Type.systemBars())
+                        }
                     }
                 }
 
@@ -333,6 +399,11 @@ fun PlayerScreen(
     val safelyNavigateBack: () -> Unit = remember(cleanupPlayback) {
         {
             cleanupPlayback()
+            activity?.window?.let { win ->
+                val insets = WindowCompat.getInsetsController(win, win.decorView)
+                insets.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+                insets.show(WindowInsetsCompat.Type.systemBars())
+            }
             onBackClick()
         }
     }
@@ -371,6 +442,11 @@ fun PlayerScreen(
                     if (!inPip) {
                         webView?.onResume()
                         webView?.resumeTimers()
+                        activity?.window?.let { win ->
+                            val insets = WindowCompat.getInsetsController(win, win.decorView)
+                            insets.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                            insets.hide(WindowInsetsCompat.Type.systemBars())
+                        }
                     }
                 }
                 Lifecycle.Event.ON_DESTROY -> {
@@ -394,8 +470,22 @@ fun PlayerScreen(
             } catch (_: Exception) {}
             customView = null
             customViewCallback = null
+            activity?.window?.let { win ->
+                val insets = WindowCompat.getInsetsController(win, win.decorView)
+                insets.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                insets.hide(WindowInsetsCompat.Type.systemBars())
+            }
         } else {
             safelyNavigateBack()
+        }
+    }
+
+    // Minimal floating controls: auto-hides after 3.5s so top bar is completely disabled during playback
+    var showFloatingControls by remember { mutableStateOf(true) }
+    LaunchedEffect(showFloatingControls) {
+        if (showFloatingControls) {
+            delay(3500)
+            showFloatingControls = false
         }
     }
 
@@ -403,6 +493,17 @@ fun PlayerScreen(
         modifier = modifier
             .fillMaxSize()
             .background(Color.Black)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                showFloatingControls = !showFloatingControls
+                activity?.window?.let { win ->
+                    val insets = WindowCompat.getInsetsController(win, win.decorView)
+                    insets.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    insets.hide(WindowInsetsCompat.Type.systemBars())
+                }
+            }
     ) {
         when (currentEngine) {
             PlayerEngine.EXO_PLAYER -> {
@@ -472,13 +573,6 @@ fun PlayerScreen(
                 },
                 modifier = Modifier.fillMaxSize()
             )
-        }
-
-        // Minimal floating controls: auto-hides after 3.5s so top bar is completely disabled during playback
-        var showFloatingControls by remember { mutableStateOf(true) }
-        LaunchedEffect(Unit) {
-            delay(3500)
-            showFloatingControls = false
         }
 
         if (showFloatingControls) {
