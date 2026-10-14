@@ -8,6 +8,7 @@ import android.graphics.Color as AndroidColor
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
+import android.os.Message
 import android.util.Rational
 import android.view.GestureDetector
 import android.view.MotionEvent
@@ -16,8 +17,10 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
+import android.webkit.JsResult
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -54,6 +57,7 @@ import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.PictureInPictureAlt
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.CircularProgressIndicator
@@ -95,6 +99,8 @@ import androidx.media3.ui.PlayerView
 import com.esheeq.app.MainActivity
 import com.esheeq.app.data.model.DailyLink
 import com.esheeq.app.data.model.SeriesDetails
+import com.esheeq.app.data.repository.AdBlockManager
+import com.esheeq.app.data.repository.DailymotionStreamResolver
 import com.esheeq.app.data.repository.PlaybackHistoryManager
 import com.esheeq.app.data.repository.SeriesRepository
 import com.esheeq.app.ui.theme.TerminalBg
@@ -257,15 +263,39 @@ fun PlayerScreen(
         }
     }
 
-    val isDirectMedia = videoUrl.contains(".m3u8", ignoreCase = true) ||
-            videoUrl.contains(".mp4", ignoreCase = true)
+    // Direct stream resolution for Dailymotion and supported mirrors
+    var resolvedDirectStreamUrl by remember(videoUrl) { mutableStateOf<String?>(null) }
+    LaunchedEffect(videoUrl) {
+        val dmId = extractDailymotionId(videoUrl)
+        if (dmId != null) {
+            val directStream = DailymotionStreamResolver.resolveStreamUrl(dmId)
+            if (!directStream.isNullOrBlank()) {
+                resolvedDirectStreamUrl = directStream
+            }
+        }
+    }
 
-    val currentEngine = remember(videoUrl) {
+    val activeVideoUrl = resolvedDirectStreamUrl ?: videoUrl
+    val isDirectMedia = activeVideoUrl.contains(".m3u8", ignoreCase = true) ||
+            activeVideoUrl.contains(".mp4", ignoreCase = true)
+
+    val currentEngine = remember(activeVideoUrl, isDirectMedia) {
         if (isDirectMedia) PlayerEngine.EXO_PLAYER else PlayerEngine.WEB_EMBED
     }
 
     val effectiveEmbedUrl = remember(videoUrl) {
         formatStreamEmbedUrl(videoUrl)
+    }
+
+    // AdBlock Shield State
+    var isShieldEnabled by remember { mutableStateOf(AdBlockManager.isAdBlockEnabled(context)) }
+    var shieldToastMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(shieldToastMessage) {
+        if (shieldToastMessage != null) {
+            delay(2500)
+            shieldToastMessage = null
+        }
     }
 
     // Resume Watching State
@@ -358,10 +388,10 @@ fun PlayerScreen(
     }
 
     // ExoPlayer Instance
-    val exoPlayer = remember(context, videoUrl, currentEngine) {
+    val exoPlayer = remember(context, activeVideoUrl, currentEngine) {
         if (currentEngine == PlayerEngine.EXO_PLAYER) {
             ExoPlayer.Builder(context).build().apply {
-                val mediaItem = MediaItem.fromUri(videoUrl)
+                val mediaItem = MediaItem.fromUri(activeVideoUrl)
                 setMediaItem(mediaItem)
                 prepare()
                 if (initialProgress != null && initialProgress.isResumeEligible) {
@@ -420,6 +450,8 @@ fun PlayerScreen(
                     allowContentAccess = true
                     loadWithOverviewMode = true
                     useWideViewPort = true
+                    setSupportMultipleWindows(false)
+                    javaScriptCanOpenWindowsAutomatically = false
                     mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                     cacheMode = WebSettings.LOAD_DEFAULT
                     userAgentString =
@@ -444,9 +476,23 @@ fun PlayerScreen(
                 addJavascriptInterface(WebAppBridge(), "AndroidBridge")
 
                 webViewClient = object : WebViewClient() {
+                    override fun shouldInterceptRequest(
+                        view: WebView?,
+                        request: WebResourceRequest?
+                    ): WebResourceResponse? {
+                        if (isShieldEnabled && request != null && AdBlockManager.isAd(request.url)) {
+                            return AdBlockManager.getEmptyResponse()
+                        }
+                        return super.shouldInterceptRequest(view, request)
+                    }
+
                     override fun onPageFinished(view: WebView?, url: String?) {
                         super.onPageFinished(view, url)
                         isWebLoading = false
+                        if (isShieldEnabled) {
+                            view?.evaluateJavascript(AdBlockManager.SCRIPT_DEFUSER, null)
+                            view?.evaluateJavascript(AdBlockManager.COSMETIC_HIDE_CSS, null)
+                        }
                     }
 
                     override fun shouldOverrideUrlLoading(
@@ -456,6 +502,9 @@ fun PlayerScreen(
                         val reqUrl = request?.url ?: return false
                         val scheme = reqUrl.scheme?.lowercase() ?: ""
                         if (scheme != "http" && scheme != "https") {
+                            return true
+                        }
+                        if (isShieldEnabled && AdBlockManager.isAd(reqUrl)) {
                             return true
                         }
                         if (request.isForMainFrame) {
@@ -478,6 +527,44 @@ fun PlayerScreen(
                 }
 
                 webChromeClient = object : WebChromeClient() {
+                    override fun onCreateWindow(
+                        view: WebView?,
+                        isDialog: Boolean,
+                        isUserGesture: Boolean,
+                        resultMsg: Message?
+                    ): Boolean {
+                        if (isShieldEnabled) {
+                            return false
+                        }
+                        return super.onCreateWindow(view, isDialog, isUserGesture, resultMsg)
+                    }
+
+                    override fun onJsAlert(
+                        view: WebView?,
+                        url: String?,
+                        message: String?,
+                        result: JsResult?
+                    ): Boolean {
+                        if (isShieldEnabled) {
+                            result?.cancel()
+                            return true
+                        }
+                        return super.onJsAlert(view, url, message, result)
+                    }
+
+                    override fun onJsConfirm(
+                        view: WebView?,
+                        url: String?,
+                        message: String?,
+                        result: JsResult?
+                    ): Boolean {
+                        if (isShieldEnabled) {
+                            result?.cancel()
+                            return true
+                        }
+                        return super.onJsConfirm(view, url, message, result)
+                    }
+
                     override fun onShowCustomView(
                         view: View?,
                         callback: CustomViewCallback?
@@ -1034,6 +1121,43 @@ fun PlayerScreen(
             }
         }
 
+        // Shield Toast Pill
+        if (shieldToastMessage != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(top = 64.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xE60D1117))
+                    .border(
+                        1.dp,
+                        if (isShieldEnabled) TerminalEmerald.copy(alpha = 0.8f) else Color.Gray.copy(alpha = 0.5f),
+                        RoundedCornerShape(20.dp)
+                    )
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Shield,
+                        contentDescription = null,
+                        tint = if (isShieldEnabled) TerminalEmerald else Color.Gray,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = shieldToastMessage ?: "",
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            }
+        }
+
         // Resume Toast Pill
         if (showResumeToast && !resumeToastTime.isNullOrBlank()) {
             Box(
@@ -1184,6 +1308,34 @@ fun PlayerScreen(
                                 modifier = Modifier.size(20.dp)
                             )
                         }
+                    }
+
+                    // AdBlock Shield Toggle Button
+                    IconButton(
+                        onClick = {
+                            isShieldEnabled = !isShieldEnabled
+                            AdBlockManager.setAdBlockEnabled(context, isShieldEnabled)
+                            shieldToastMessage = if (isShieldEnabled) "درع الإعلانات: مفعل" else "درع الإعلانات: معطل"
+                            if (currentEngine == PlayerEngine.WEB_EMBED) {
+                                webView?.reload()
+                            }
+                        },
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(if (isShieldEnabled) TerminalEmerald.copy(alpha = 0.25f) else Color(0x80000000))
+                            .border(
+                                1.dp,
+                                if (isShieldEnabled) TerminalEmerald.copy(alpha = 0.6f) else Color.Transparent,
+                                CircleShape
+                            )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Shield,
+                            contentDescription = if (isShieldEnabled) "درع الإعلانات: مفعل" else "درع الإعلانات: معطل",
+                            tint = if (isShieldEnabled) TerminalEmerald else Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier.size(19.dp)
+                        )
                     }
 
                     // Screen Lock Button
