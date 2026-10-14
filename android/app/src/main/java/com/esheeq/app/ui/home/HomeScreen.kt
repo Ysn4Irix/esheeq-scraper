@@ -17,15 +17,27 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import android.widget.Toast
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -33,12 +45,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.esheeq.app.data.model.LatestEpisode
 import com.esheeq.app.data.model.SearchResult
+import com.esheeq.app.data.repository.AppUpdateManager
 import com.esheeq.app.ui.components.BadgeStyle
 import com.esheeq.app.ui.components.LatestEpisodeCard
 import com.esheeq.app.ui.components.SearchBarComponent
 import com.esheeq.app.ui.components.SeriesCard
 import com.esheeq.app.ui.components.StatusBadge
 import com.esheeq.app.ui.components.TerminalTopBar
+import com.esheeq.app.ui.components.UpdateDialog
 import com.esheeq.app.ui.theme.TerminalBg
 import com.esheeq.app.ui.theme.TerminalBlue
 import com.esheeq.app.ui.theme.TerminalBorder
@@ -48,6 +62,7 @@ import com.esheeq.app.ui.theme.TerminalRedDim
 import com.esheeq.app.ui.theme.TerminalSurface
 import com.esheeq.app.ui.theme.TerminalTextMuted
 import com.esheeq.app.ui.theme.TerminalTextPrimary
+import kotlinx.coroutines.launch
 
 @Composable
 fun HomeScreen(
@@ -56,7 +71,22 @@ fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsState()
+    val latestUpdateInfo by AppUpdateManager.latestUpdateInfo.collectAsState()
+    val downloadState by AppUpdateManager.downloadState.collectAsState()
+    var showUpdateDialog by remember { mutableStateOf(false) }
+    var isCheckingUpdates by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        val result = AppUpdateManager.checkForUpdates(isManual = false)
+        result.getOrNull()?.let { info ->
+            if (info.isUpdateAvailable && !AppUpdateManager.isDismissedVersion(info.latestVersionName)) {
+                showUpdateDialog = true
+            }
+        }
+    }
 
     Column(
         modifier = modifier
@@ -64,7 +94,60 @@ fun HomeScreen(
             .background(TerminalBg)
     ) {
         TerminalTopBar(
-            title = "قصة عشق"
+            title = "قصة عشق",
+            actions = {
+                Box {
+                    IconButton(
+                        onClick = {
+                            if (latestUpdateInfo?.isUpdateAvailable == true) {
+                                showUpdateDialog = true
+                            } else {
+                                coroutineScope.launch {
+                                    isCheckingUpdates = true
+                                    val res = AppUpdateManager.checkForUpdates(isManual = true)
+                                    isCheckingUpdates = false
+                                    val info = res.getOrNull()
+                                    if (info != null && info.isUpdateAvailable) {
+                                        showUpdateDialog = true
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            "أنت تستخدم أحدث إصدار (v${AppUpdateManager.getCurrentVersionName()})",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                            }
+                        },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        if (isCheckingUpdates) {
+                            CircularProgressIndicator(
+                                color = TerminalBlue,
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.SystemUpdate,
+                                contentDescription = "فحص التحديثات",
+                                tint = if (latestUpdateInfo?.isUpdateAvailable == true) TerminalEmerald else TerminalTextMuted,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    if (latestUpdateInfo?.isUpdateAvailable == true) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(TerminalEmerald)
+                                .align(Alignment.TopEnd)
+                        )
+                    }
+                }
+            }
         )
 
         LazyColumn(
@@ -210,6 +293,29 @@ fun HomeScreen(
                 }
             }
         }
+    }
+
+    if (showUpdateDialog && latestUpdateInfo != null) {
+        UpdateDialog(
+            updateInfo = latestUpdateInfo!!,
+            downloadState = downloadState,
+            onStartDownload = {
+                coroutineScope.launch {
+                    AppUpdateManager.downloadApk(latestUpdateInfo!!)
+                }
+            },
+            onInstallApk = { apkFile ->
+                AppUpdateManager.installApk(context, apkFile)
+            },
+            onOpenBrowser = { url ->
+                AppUpdateManager.openBrowser(context, url)
+            },
+            onDismiss = {
+                AppUpdateManager.dismissVersion(latestUpdateInfo!!.latestVersionName)
+                showUpdateDialog = false
+                AppUpdateManager.resetDownloadState()
+            }
+        )
     }
 }
 

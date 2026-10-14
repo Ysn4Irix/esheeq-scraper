@@ -31,13 +31,16 @@ import com.esheeq.app.ui.theme.TerminalSurface
 import com.esheeq.app.ui.theme.TerminalTextMuted
 import com.esheeq.app.ui.theme.TerminalTextPrimary
 
+import androidx.compose.foundation.layout.RowScope
+
 @Composable
 fun TerminalTopBar(
     title: String = "قصة عشق",
     subTitle: String? = null,
     showBackButton: Boolean = false,
     showLiveIndicator: Boolean = false,
-    onBackClick: () -> Unit = {}
+    onBackClick: () -> Unit = {},
+    actions: @Composable RowScope.() -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -98,6 +101,13 @@ fun TerminalTopBar(
                         fontSize = 20.sp
                     )
                 }
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                actions()
             }
         }
 

@@ -2,6 +2,7 @@ package com.esheeq.app
 
 import android.app.Application
 import com.esheeq.app.data.api.ApiClient
+import com.esheeq.app.data.repository.AppUpdateManager
 import com.esheeq.app.data.repository.PlaybackHistoryManager
 
 class EsheeqApp : Application() {
@@ -9,5 +10,6 @@ class EsheeqApp : Application() {
         super.onCreate()
         ApiClient.init(this)
         PlaybackHistoryManager.init(this)
+        AppUpdateManager.init(this)
     }
 }
