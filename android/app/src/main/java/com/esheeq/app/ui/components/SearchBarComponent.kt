@@ -41,6 +41,7 @@ fun SearchBarComponent(
     query: String,
     onQueryChange: (String) -> Unit,
     placeholder: String = "ابحث عن اسم المسلسل (مثال: الحفرة، طائر الرفراف)...",
+    onSearch: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val focusManager = LocalFocusManager.current
@@ -91,7 +92,10 @@ fun SearchBarComponent(
                     cursorBrush = SolidColor(TerminalBlue),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(
-                        onSearch = { focusManager.clearFocus() }
+                        onSearch = {
+                            onSearch?.invoke()
+                            focusManager.clearFocus()
+                        }
                     )
                 )
             }

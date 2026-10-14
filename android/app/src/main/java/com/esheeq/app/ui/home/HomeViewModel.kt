@@ -1,9 +1,11 @@
 package com.esheeq.app.ui.home
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esheeq.app.data.model.LatestEpisode
 import com.esheeq.app.data.model.SearchResult
+import com.esheeq.app.data.repository.SearchHistoryManager
 import com.esheeq.app.data.repository.SeriesRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -30,6 +32,8 @@ class HomeViewModel(
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    val searchHistory: StateFlow<List<String>> = SearchHistoryManager.historyState
 
     private var searchJob: Job? = null
 
@@ -69,5 +73,20 @@ class HomeViewModel(
                 _uiState.update { it.copy(searchError = err.message, isSearching = false) }
             }
         }
+    }
+
+    fun recordSearch(context: Context, query: String = _uiState.value.searchQuery) {
+        val trimmed = query.trim()
+        if (trimmed.isNotBlank()) {
+            SearchHistoryManager.addQuery(context, trimmed)
+        }
+    }
+
+    fun removeHistoryItem(context: Context, query: String) {
+        SearchHistoryManager.removeQuery(context, query)
+    }
+
+    fun clearHistory(context: Context) {
+        SearchHistoryManager.clearHistory(context)
     }
 }

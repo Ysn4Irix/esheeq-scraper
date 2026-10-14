@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,11 +22,14 @@ import android.widget.Toast
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -58,12 +62,14 @@ import com.esheeq.app.ui.theme.TerminalBlue
 import com.esheeq.app.ui.theme.TerminalBorder
 import com.esheeq.app.ui.theme.TerminalEmerald
 import com.esheeq.app.ui.theme.TerminalRed
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import com.esheeq.app.ui.theme.TerminalRedDim
 import com.esheeq.app.ui.theme.TerminalSurface
 import com.esheeq.app.ui.theme.TerminalTextMuted
 import com.esheeq.app.ui.theme.TerminalTextPrimary
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HomeScreen(
     onNavigateToSeries: (String) -> Unit,
@@ -74,6 +80,7 @@ fun HomeScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsState()
+    val searchHistory by viewModel.searchHistory.collectAsState()
     val latestUpdateInfo by AppUpdateManager.latestUpdateInfo.collectAsState()
     val downloadState by AppUpdateManager.downloadState.collectAsState()
     var showUpdateDialog by remember { mutableStateOf(false) }
@@ -159,8 +166,103 @@ fun HomeScreen(
             item {
                 SearchBarComponent(
                     query = uiState.searchQuery,
-                    onQueryChange = viewModel::onSearchQueryChanged
+                    onQueryChange = viewModel::onSearchQueryChanged,
+                    onSearch = {
+                        viewModel.recordSearch(context)
+                    }
                 )
+            }
+
+            // Recent Search History Section (Visible when query is empty and history exists)
+            if (uiState.searchQuery.isEmpty() && searchHistory.isNotEmpty()) {
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(TerminalSurface)
+                            .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
+                            .padding(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.History,
+                                    contentDescription = null,
+                                    tint = TerminalBlue,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "سجل البحث // RECENT",
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TerminalTextMuted
+                                )
+                            }
+
+                            Text(
+                                text = "مسح الكل",
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 11.sp,
+                                color = TerminalTextMuted,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .clickable { viewModel.clearHistory(context) }
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            searchHistory.forEach { historyQuery ->
+                                Row(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color(0xFF161B22))
+                                        .border(1.dp, TerminalBorder, RoundedCornerShape(6.dp))
+                                        .clickable {
+                                            viewModel.onSearchQueryChanged(historyQuery)
+                                            viewModel.recordSearch(context, historyQuery)
+                                        }
+                                        .padding(start = 10.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = "> $historyQuery",
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 12.sp,
+                                        color = TerminalTextPrimary
+                                    )
+                                    IconButton(
+                                        onClick = { viewModel.removeHistoryItem(context, historyQuery) },
+                                        modifier = Modifier.size(20.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "حذف",
+                                            tint = TerminalTextMuted,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             // If user is searching
@@ -216,7 +318,10 @@ fun HomeScreen(
                     items(uiState.searchResults, key = { it.id.ifEmpty { it.url } }) { series ->
                         SeriesCard(
                             series = series,
-                            onClick = { onNavigateToSeries(it.id) }
+                            onClick = {
+                                viewModel.recordSearch(context)
+                                onNavigateToSeries(it.id)
+                            }
                         )
                     }
                 }
