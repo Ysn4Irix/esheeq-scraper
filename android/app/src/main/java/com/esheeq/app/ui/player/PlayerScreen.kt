@@ -80,9 +80,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -214,6 +216,7 @@ fun PlayerScreen(
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
     // Immersive mode: hide status bar, navigation bar, and bottom area for true edge-to-edge playback
     DisposableEffect(activity) {
@@ -1212,7 +1215,12 @@ fun PlayerScreen(
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
                     .statusBarsPadding()
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                    .padding(
+                        start = if (isRtl) 68.dp else 14.dp,
+                        end = if (isRtl) 14.dp else 68.dp,
+                        top = 10.dp,
+                        bottom = 10.dp
+                    ),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -1393,7 +1401,10 @@ fun PlayerScreen(
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .statusBarsPadding()
-                    .padding(start = 14.dp, top = 10.dp)
+                    .padding(
+                        start = if (isRtl) 68.dp else 14.dp,
+                        top = 10.dp
+                    )
                     .size(38.dp)
                     .clip(CircleShape)
                     .background(Color(0x66000000))
