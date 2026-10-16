@@ -158,8 +158,10 @@ fun buildDailymotionHtml(videoId: String, startSeconds: Long = 0L): String {
           <iframe
             id="dm_player"
             src="https://www.dailymotion.com/embed/video/$videoId?autoplay=1&ui-logo=0&ui-start-screen-info=0$startParam"
-            allow="autoplay; fullscreen; picture-in-picture; web-share"
-            allowfullscreen>
+            allow="autoplay; fullscreen; picture-in-picture; web-share; encrypted-media"
+            allowfullscreen
+            webkitallowfullscreen
+            mozallowfullscreen>
           </iframe>
           <script>
             window.addEventListener('message', function(e) {
@@ -457,6 +459,8 @@ fun PlayerScreen(
                 )
                 setBackgroundColor(AndroidColor.BLACK)
                 setLayerType(View.LAYER_TYPE_HARDWARE, null)
+                isFocusable = true
+                isFocusableInTouchMode = true
 
                 val currentWebView = this
                 CookieManager.getInstance().apply {
@@ -473,7 +477,7 @@ fun PlayerScreen(
                     loadWithOverviewMode = true
                     useWideViewPort = true
                     setSupportMultipleWindows(false)
-                    javaScriptCanOpenWindowsAutomatically = false
+                    javaScriptCanOpenWindowsAutomatically = true
                     mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                     cacheMode = WebSettings.LOAD_DEFAULT
                     userAgentString =
@@ -876,7 +880,12 @@ fun PlayerScreen(
                                 (webView.parent as? ViewGroup)?.removeView(webView)
                                 val webGestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
                                     override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-                                        showFloatingControls = !showFloatingControls
+                                        val w = webView.width.toFloat()
+                                        val density = context.resources.displayMetrics.density
+                                        val isTopRightControlsArea = e.x > (w - 90f * density) && e.y < (70f * density)
+                                        if (!isTopRightControlsArea) {
+                                            showFloatingControls = !showFloatingControls
+                                        }
                                         return false
                                     }
                                     override fun onDoubleTap(e: MotionEvent): Boolean {
@@ -941,13 +950,14 @@ fun PlayerScreen(
             )
         }
 
-        // Left Edge Gesture Zone: Vertical drag adjusts Brightness (outer 18% margin only)
+        // Left Edge Gesture Zone: Vertical drag adjusts Brightness (outer margin, middle section)
         if (!isLocked) {
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .fillMaxHeight()
-                    .fillMaxWidth(0.18f)
+                    .padding(vertical = 76.dp)
+                    .fillMaxWidth(0.14f)
                     .pointerInput(Unit) {
                         detectVerticalDragGestures(
                             onDragStart = { gestureIndicatorType = "brightness" },
@@ -973,13 +983,14 @@ fun PlayerScreen(
             )
         }
 
-        // Right Edge Gesture Zone: Vertical drag adjusts Volume (outer 18% margin only)
+        // Right Edge Gesture Zone: Vertical drag adjusts Volume (outer margin, middle section)
         if (!isLocked) {
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .fillMaxHeight()
-                    .fillMaxWidth(0.18f)
+                    .padding(vertical = 76.dp)
+                    .fillMaxWidth(0.14f)
                     .pointerInput(Unit) {
                         detectVerticalDragGestures(
                             onDragStart = { gestureIndicatorType = "volume" },
@@ -1313,12 +1324,12 @@ fun PlayerScreen(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
                         .weight(1f)
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 14.dp)
                 )
 
                 // Controls action row
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Previous Episode Shortcut
