@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.PictureInPictureParams
 import android.content.Context
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.graphics.Color as AndroidColor
 import android.media.AudioManager
 import android.net.Uri
@@ -57,6 +59,7 @@ import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.PictureInPictureAlt
+import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
@@ -79,6 +82,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontFamily
@@ -217,6 +221,8 @@ fun PlayerScreen(
     val context = LocalContext.current
     val activity = context as? Activity
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     // Immersive mode: hide status bar, navigation bar, and bottom area for true edge-to-edge playback
     DisposableEffect(activity) {
@@ -235,6 +241,9 @@ fun PlayerScreen(
 
         window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+        // Auto-rotate to landscape orientation for widescreen playback
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+
         @Suppress("DEPRECATION")
         window?.statusBarColor = AndroidColor.TRANSPARENT
         @Suppress("DEPRECATION")
@@ -246,6 +255,7 @@ fun PlayerScreen(
         }
 
         onDispose {
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && window != null) {
@@ -298,6 +308,15 @@ fun PlayerScreen(
         if (shieldToastMessage != null) {
             delay(2500)
             shieldToastMessage = null
+        }
+    }
+
+    // Orientation Feedback State
+    var orientationToastMessage by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(orientationToastMessage) {
+        if (orientationToastMessage != null) {
+            delay(2000)
+            orientationToastMessage = null
         }
     }
 
@@ -574,6 +593,7 @@ fun PlayerScreen(
                     ) {
                         customView = view
                         customViewCallback = callback
+                        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
                         activity?.window?.let { win ->
                             val insets = WindowCompat.getInsetsController(win, win.decorView)
                             insets.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -714,6 +734,7 @@ fun PlayerScreen(
     val safelyNavigateBack: () -> Unit = remember(cleanupPlayback) {
         {
             cleanupPlayback()
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             activity?.window?.let { win ->
                 val insets = WindowCompat.getInsetsController(win, win.decorView)
                 insets.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
@@ -1102,6 +1123,11 @@ fun PlayerScreen(
                         isLocked = false
                         showUnlockPill = false
                         showFloatingControls = true
+                        activity?.requestedOrientation = if (isLandscape) {
+                            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                        } else {
+                            ActivityInfo.SCREEN_ORIENTATION_SENSOR
+                        }
                     }
                     .padding(horizontal = 16.dp, vertical = 10.dp)
             ) {
@@ -1152,6 +1178,43 @@ fun PlayerScreen(
                     )
                     Text(
                         text = shieldToastMessage ?: "",
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            }
+        }
+
+        // Orientation Toast Pill
+        if (orientationToastMessage != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(top = 64.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xE60D1117))
+                    .border(
+                        1.dp,
+                        TerminalEmerald.copy(alpha = 0.8f),
+                        RoundedCornerShape(20.dp)
+                    )
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ScreenRotation,
+                        contentDescription = null,
+                        tint = TerminalEmerald,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = orientationToastMessage ?: "",
                         fontFamily = FontFamily.Monospace,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
@@ -1346,12 +1409,50 @@ fun PlayerScreen(
                         )
                     }
 
+                    // Screen Orientation Toggle Button
+                    IconButton(
+                        onClick = {
+                            val target = if (isLandscape) {
+                                ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                            } else {
+                                ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                            }
+                            activity?.requestedOrientation = target
+                            orientationToastMessage = if (target == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT) {
+                                "الوضع الرأسي"
+                            } else {
+                                "الوضع الأفقي (ملء الشاشة)"
+                            }
+                        },
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(if (isLandscape) TerminalEmerald.copy(alpha = 0.25f) else Color(0x80000000))
+                            .border(
+                                1.dp,
+                                if (isLandscape) TerminalEmerald.copy(alpha = 0.6f) else Color.Transparent,
+                                CircleShape
+                            )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ScreenRotation,
+                            contentDescription = if (isLandscape) "التبديل إلى الوضع الرأسي" else "التبديل إلى الوضع الأفقي",
+                            tint = if (isLandscape) TerminalEmerald else Color.White,
+                            modifier = Modifier.size(19.dp)
+                        )
+                    }
+
                     // Screen Lock Button
                     IconButton(
                         onClick = {
                             isLocked = true
                             showFloatingControls = false
                             showUnlockPill = true
+                            activity?.requestedOrientation = if (isLandscape) {
+                                ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                            } else {
+                                ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                            }
                         },
                         modifier = Modifier
                             .size(38.dp)
