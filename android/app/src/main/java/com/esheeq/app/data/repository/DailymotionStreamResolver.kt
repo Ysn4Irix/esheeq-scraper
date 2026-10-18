@@ -9,6 +9,9 @@ import java.util.concurrent.TimeUnit
 
 object DailymotionStreamResolver {
 
+    private const val DESKTOP_USER_AGENT =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+
     private val client = OkHttpClient.Builder()
         .connectTimeout(6, TimeUnit.SECONDS)
         .readTimeout(8, TimeUnit.SECONDS)
@@ -24,7 +27,7 @@ object DailymotionStreamResolver {
             val url = "https://www.dailymotion.com/player/metadata/video/$videoId"
             val request = Request.Builder()
                 .url(url)
-                .header("User-Agent", "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+                .header("User-Agent", DESKTOP_USER_AGENT)
                 .header("Referer", "https://www.dailymotion.com/")
                 .build()
 
@@ -44,7 +47,7 @@ object DailymotionStreamResolver {
                                 // Test if the manifest is directly reachable without 403
                                 val testReq = Request.Builder()
                                     .url(streamUrl)
-                                    .header("User-Agent", "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+                                    .header("User-Agent", DESKTOP_USER_AGENT)
                                     .header("Referer", "https://www.dailymotion.com/")
                                     .build()
                                 client.newCall(testReq).execute().use { testResp ->

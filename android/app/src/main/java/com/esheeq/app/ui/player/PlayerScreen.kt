@@ -100,7 +100,10 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.PlayerView
 import com.esheeq.app.MainActivity
 import com.esheeq.app.data.model.DailyLink
@@ -115,6 +118,9 @@ import com.esheeq.app.ui.theme.TerminalBorder
 import com.esheeq.app.ui.theme.TerminalEmerald
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+
+const val DESKTOP_USER_AGENT =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
 
 enum class PlayerEngine {
     EXO_PLAYER,
@@ -157,16 +163,31 @@ fun buildDailymotionHtml(videoId: String, startSeconds: Long = 0L): String {
         <body>
           <iframe
             id="dm_player"
-            src="https://www.dailymotion.com/embed/video/$videoId?autoplay=1&ui-logo=0&ui-start-screen-info=0$startParam"
+            src="https://www.dailymotion.com/embed/video/$videoId?autoplay=1&ui-logo=0&ui-start-screen-info=0&quality=1080$startParam"
             allow="autoplay; fullscreen; picture-in-picture; web-share; encrypted-media"
             allowfullscreen
             webkitallowfullscreen
             mozallowfullscreen>
           </iframe>
           <script>
+            function setHighestQuality() {
+                var iframe = document.getElementById('dm_player');
+                if (iframe && iframe.contentWindow) {
+                    try {
+                        iframe.contentWindow.postMessage(JSON.stringify({command: 'setQuality', parameters: ['1080']}), '*');
+                    } catch(e) {}
+                }
+            }
+            window.addEventListener('load', function() {
+                setTimeout(setHighestQuality, 1200);
+                setTimeout(setHighestQuality, 3000);
+            });
             window.addEventListener('message', function(e) {
                 try {
                     var data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+                    if (data && (data.event === 'video_start' || data.event === 'playing')) {
+                        setHighestQuality();
+                    }
                     if (data && data.event === 'timeupdate') {
                         var cur = Math.floor((data.time || 0) * 1000);
                         var dur = Math.floor((data.duration || 0) * 1000);
@@ -196,7 +217,7 @@ fun formatStreamEmbedUrl(rawUrl: String): String {
 
     val dmId = extractDailymotionId(trimmed)
     if (dmId != null) {
-        return "https://www.dailymotion.com/embed/video/$dmId?autoplay=1&ui-logo=0&ui-start-screen-info=0"
+        return "https://www.dailymotion.com/embed/video/$dmId?autoplay=1&ui-logo=0&ui-start-screen-info=0&quality=1080"
     }
 
     val okMatch = Regex("""ok\.ru/video(?:embed)?/([0-9]+)""").find(trimmed)
@@ -414,15 +435,30 @@ fun PlayerScreen(
     // ExoPlayer Instance
     val exoPlayer = remember(context, activeVideoUrl, currentEngine) {
         if (currentEngine == PlayerEngine.EXO_PLAYER) {
-            ExoPlayer.Builder(context).build().apply {
-                val mediaItem = MediaItem.fromUri(activeVideoUrl)
-                setMediaItem(mediaItem)
-                prepare()
-                if (initialProgress != null && initialProgress.isResumeEligible) {
-                    seekTo(initialProgress.positionMs)
-                }
-                playWhenReady = true
+            val trackSelector = DefaultTrackSelector(context).apply {
+                setParameters(
+                    buildUponParameters()
+                        .setMaxVideoSize(3840, 2160)
+                )
             }
+            val httpDataSourceFactory = DefaultHttpDataSource.Factory()
+                .setUserAgent(DESKTOP_USER_AGENT)
+                .setDefaultRequestProperties(mapOf("Referer" to "https://www.dailymotion.com/"))
+            val mediaSourceFactory = DefaultMediaSourceFactory(context)
+                .setDataSourceFactory(httpDataSourceFactory)
+
+            ExoPlayer.Builder(context)
+                .setTrackSelector(trackSelector)
+                .setMediaSourceFactory(mediaSourceFactory)
+                .build().apply {
+                    val mediaItem = MediaItem.fromUri(activeVideoUrl)
+                    setMediaItem(mediaItem)
+                    prepare()
+                    if (initialProgress != null && initialProgress.isResumeEligible) {
+                        seekTo(initialProgress.positionMs)
+                    }
+                    playWhenReady = true
+                }
         } else {
             null
         }
@@ -480,8 +516,7 @@ fun PlayerScreen(
                     javaScriptCanOpenWindowsAutomatically = true
                     mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                     cacheMode = WebSettings.LOAD_DEFAULT
-                    userAgentString =
-                        "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+                    userAgentString = DESKTOP_USER_AGENT
                 }
 
                 class WebAppBridge {
