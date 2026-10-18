@@ -57,8 +57,15 @@ data class FavoriteSeries(
     @SerializedName("addedAt") val addedAt: Long = System.currentTimeMillis()
 )
 
-fun SeriesDetails.toFavorite(url: String = ""): FavoriteSeries =
-    FavoriteSeries(id = id, title = title, cover = cover, url = url)
+fun SeriesDetails.toFavorite(seriesId: String = "", url: String = ""): FavoriteSeries {
+    val effectiveId = when {
+        seriesId.isNotBlank() && seriesId.none { it.code > 127 } -> seriesId
+        id.none { it.code > 127 } -> id
+        seriesId.isNotBlank() -> seriesId
+        else -> id
+    }
+    return FavoriteSeries(id = effectiveId, title = title, cover = cover, url = url)
+}
 
 fun SearchResult.toFavorite(): FavoriteSeries =
     FavoriteSeries(id = id, title = title, cover = cover, url = url)

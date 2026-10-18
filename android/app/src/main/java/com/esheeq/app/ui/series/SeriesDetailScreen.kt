@@ -85,7 +85,7 @@ fun SeriesDetailScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val favoritesList by FavoritesManager.favoritesState.collectAsState()
-    val isFavorite = favoritesList.any { it.id == seriesId }
+    val isFavorite = favoritesList.any { it.id == seriesId || (uiState.series != null && it.id == uiState.series?.id) }
 
     LaunchedEffect(seriesId) {
         viewModel.loadSeries(seriesId)
@@ -106,7 +106,7 @@ fun SeriesDetailScreen(
                 if (details != null) {
                     IconButton(
                         onClick = {
-                            val isNowFav = FavoritesManager.toggleFavorite(context, details.toFavorite())
+                            val isNowFav = FavoritesManager.toggleFavorite(context, details.toFavorite(seriesId = seriesId), alternateId = seriesId)
                             val msg = if (isNowFav) "تمت إضافة \"${details.title}\" إلى المفضلة" else "تمت إزالة \"${details.title}\" من المفضلة"
                             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                         },
@@ -201,7 +201,7 @@ fun SeriesDetailScreen(
                             series = series,
                             isFavorite = isFavorite,
                             onToggleFavorite = {
-                                val isNowFav = FavoritesManager.toggleFavorite(context, series.toFavorite())
+                                val isNowFav = FavoritesManager.toggleFavorite(context, series.toFavorite(seriesId = seriesId), alternateId = seriesId)
                                 val msg = if (isNowFav) "تمت إضافة \"${series.title}\" إلى المفضلة" else "تمت إزالة \"${series.title}\" من المفضلة"
                                 Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                             }
@@ -248,7 +248,8 @@ fun SeriesDetailScreen(
                             seriesTitle = series.title,
                             dailyLink = item,
                             onWatchClick = { url ->
-                                onNavigateToPlayer(url, "${series.title} - الحلقة ${item.episode}", series.id, item.episode)
+                                val playerSeriesId = if (series.id.none { it.code > 127 }) series.id else seriesId
+                                onNavigateToPlayer(url, "${series.title} - الحلقة ${item.episode}", playerSeriesId, item.episode)
                             },
                             onCopyClick = { url ->
                                 copySingleLink(context, url)

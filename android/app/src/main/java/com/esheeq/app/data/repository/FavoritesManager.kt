@@ -46,9 +46,10 @@ object FavoritesManager {
         } catch (_: Exception) {}
     }
 
-    fun isFavorite(seriesId: String): Boolean {
-        if (seriesId.isBlank()) return false
-        return _favoritesState.value.any { it.id == seriesId }
+    fun isFavorite(vararg seriesIds: String?): Boolean {
+        val candidates = seriesIds.filterNotNull().filter { it.isNotBlank() }
+        if (candidates.isEmpty()) return false
+        return _favoritesState.value.any { fav -> candidates.any { it == fav.id } }
     }
 
     fun addFavorite(context: Context, series: FavoriteSeries) {
@@ -59,6 +60,18 @@ object FavoritesManager {
         current.removeAll { it.id == series.id }
         current.add(0, series)
         persistToDisk(current)
+    }
+
+    fun updateFavoriteId(context: Context? = null, oldId: String, newId: String) {
+        if (context != null) init(context)
+        if (oldId.isBlank() || newId.isBlank() || oldId == newId) return
+        val current = _favoritesState.value.toMutableList()
+        val index = current.indexOfFirst { it.id == oldId }
+        if (index != -1) {
+            val old = current[index]
+            current[index] = old.copy(id = newId)
+            persistToDisk(current)
+        }
     }
 
     fun removeFavorite(context: Context, seriesId: String) {
@@ -72,11 +85,14 @@ object FavoritesManager {
         }
     }
 
-    fun toggleFavorite(context: Context, series: FavoriteSeries): Boolean {
+    fun toggleFavorite(context: Context, series: FavoriteSeries, alternateId: String? = null): Boolean {
         init(context)
-        val currentlyFav = isFavorite(series.id)
+        val idsToMatch = listOfNotNull(series.id, alternateId).filter { it.isNotBlank() }
+        val currentlyFav = _favoritesState.value.any { fav -> idsToMatch.any { it == fav.id } }
         if (currentlyFav) {
-            removeFavorite(context, series.id)
+            val current = _favoritesState.value.toMutableList()
+            current.removeAll { fav -> idsToMatch.any { it == fav.id } }
+            persistToDisk(current)
             return false
         } else {
             addFavorite(context, series)

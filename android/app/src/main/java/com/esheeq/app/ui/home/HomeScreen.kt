@@ -463,7 +463,14 @@ fun HomeScreen(
                             items(favoritesList, key = { it.id }) { fav ->
                                 FavoriteSeriesCard(
                                     series = fav,
-                                    onClick = { onNavigateToSeries(fav.id) },
+                                    onClick = {
+                                        val targetSlug = if (fav.id.any { it.code > 127 } && fav.url.isNotBlank()) {
+                                            fav.url.trimEnd('/').substringAfterLast('/').ifBlank { fav.id }
+                                        } else {
+                                            fav.id
+                                        }
+                                        onNavigateToSeries(targetSlug)
+                                    },
                                     onRemove = {
                                         FavoritesManager.removeFavorite(context, fav.id)
                                         Toast.makeText(context, "تمت إزالة \"${fav.title}\" من المفضلة", Toast.LENGTH_SHORT).show()
