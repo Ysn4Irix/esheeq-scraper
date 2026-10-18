@@ -22,6 +22,8 @@ import android.widget.Toast
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.SystemUpdate
@@ -50,7 +52,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.esheeq.app.data.model.LatestEpisode
 import com.esheeq.app.data.model.SearchResult
 import com.esheeq.app.data.repository.AppUpdateManager
+import com.esheeq.app.data.repository.FavoritesManager
 import com.esheeq.app.ui.components.BadgeStyle
+import com.esheeq.app.ui.components.FavoriteSeriesCard
 import com.esheeq.app.ui.components.LatestEpisodeCard
 import com.esheeq.app.ui.components.SearchBarComponent
 import com.esheeq.app.ui.components.SeriesCard
@@ -69,6 +73,11 @@ import com.esheeq.app.ui.theme.TerminalTextMuted
 import com.esheeq.app.ui.theme.TerminalTextPrimary
 import kotlinx.coroutines.launch
 
+enum class HomeFeedTab {
+    LATEST,
+    FAVORITES
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HomeScreen(
@@ -81,6 +90,8 @@ fun HomeScreen(
     val coroutineScope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsState()
     val searchHistory by viewModel.searchHistory.collectAsState()
+    val favoritesList by FavoritesManager.favoritesState.collectAsState()
+    var selectedFeedTab by remember { mutableStateOf(HomeFeedTab.LATEST) }
     val latestUpdateInfo by AppUpdateManager.latestUpdateInfo.collectAsState()
     val downloadState by AppUpdateManager.downloadState.collectAsState()
     var showUpdateDialog by remember { mutableStateOf(false) }
@@ -326,74 +337,140 @@ fun HomeScreen(
                     }
                 }
             } else {
-                // Latest Episodes Feed (Default View)
+                // Segmented Switcher for Home Feed Tabs
                 item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(width = 4.dp, height = 18.dp)
-                                    .clip(RoundedCornerShape(2.dp))
-                                    .background(TerminalEmerald)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "آخر الحلقات المضافة",
-                                fontFamily = FontFamily.SansSerif,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TerminalTextPrimary
-                            )
-                        }
-                        StatusBadge(
-                            text = "${uiState.latestEpisodes.size.coerceAtLeast(5)} حلقات جديدة",
-                            style = BadgeStyle.SUCCESS,
-                            showDot = true
-                        )
-                    }
+                    HomeFeedSwitcher(
+                        selectedTab = selectedFeedTab,
+                        onTabSelected = { selectedFeedTab = it },
+                        favoritesCount = favoritesList.size
+                    )
                 }
 
-                if (uiState.isLatestLoading) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(
-                                color = TerminalEmerald,
-                                modifier = Modifier.size(32.dp),
-                                strokeWidth = 2.dp
-                            )
+                when (selectedFeedTab) {
+                    HomeFeedTab.LATEST -> {
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(width = 4.dp, height = 18.dp)
+                                            .clip(RoundedCornerShape(2.dp))
+                                            .background(TerminalEmerald)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "آخر الحلقات المضافة",
+                                        fontFamily = FontFamily.SansSerif,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TerminalTextPrimary
+                                    )
+                                }
+                                StatusBadge(
+                                    text = "${uiState.latestEpisodes.size.coerceAtLeast(5)} حلقات جديدة",
+                                    style = BadgeStyle.SUCCESS,
+                                    showDot = true
+                                )
+                            }
+                        }
+
+                        if (uiState.isLatestLoading) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        color = TerminalEmerald,
+                                        modifier = Modifier.size(32.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                }
+                            }
+                        } else if (uiState.latestError != null) {
+                            item {
+                                TerminalErrorCard(
+                                    message = uiState.latestError ?: "تعذر جلب الحلقات الأخيرة",
+                                    onRetry = viewModel::loadLatestEpisodes
+                                )
+                            }
+                        } else if (uiState.latestEpisodes.isEmpty()) {
+                            item {
+                                TerminalEmptyCard(message = "لا توجد حلقات متاحة في قائمة الانتظار حالياً")
+                            }
+                        } else {
+                            items(uiState.latestEpisodes, key = { it.id.ifEmpty { it.url } }) { episode ->
+                                LatestEpisodeCard(
+                                    episode = episode,
+                                    onWatchClick = { ep ->
+                                        val targetUrl = ep.streamLink ?: ep.url
+                                        onNavigateToPlayer(targetUrl, ep.title, ep.id, ep.episode)
+                                    }
+                                )
+                            }
                         }
                     }
-                } else if (uiState.latestError != null) {
-                    item {
-                        TerminalErrorCard(
-                            message = uiState.latestError ?: "تعذر جلب الحلقات الأخيرة",
-                            onRetry = viewModel::loadLatestEpisodes
-                        )
-                    }
-                } else if (uiState.latestEpisodes.isEmpty()) {
-                    item {
-                        TerminalEmptyCard(message = "لا توجد حلقات متاحة في قائمة الانتظار حالياً")
-                    }
-                } else {
-                    items(uiState.latestEpisodes, key = { it.id.ifEmpty { it.url } }) { episode ->
-                        LatestEpisodeCard(
-                            episode = episode,
-                            onWatchClick = { ep ->
-                                val targetUrl = ep.streamLink ?: ep.url
-                                onNavigateToPlayer(targetUrl, ep.title, ep.id, ep.episode)
+
+                    HomeFeedTab.FAVORITES -> {
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(width = 4.dp, height = 18.dp)
+                                            .clip(RoundedCornerShape(2.dp))
+                                            .background(TerminalEmerald)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "المسلسلات المفضلة",
+                                        fontFamily = FontFamily.SansSerif,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TerminalTextPrimary
+                                    )
+                                }
+                                if (favoritesList.isNotEmpty()) {
+                                    Text(
+                                        text = "${favoritesList.size} عمل محفوظ",
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 12.sp,
+                                        color = TerminalTextMuted
+                                    )
+                                }
                             }
-                        )
+                        }
+
+                        if (favoritesList.isEmpty()) {
+                            item {
+                                TerminalEmptyCard(message = "لا توجد مسلسلات في قائمتك المفضلة حتى الآن\nاضغط على أيقونة الإشارة المرجعية في صفحة أي مسلسل لحفظه هنا")
+                            }
+                        } else {
+                            items(favoritesList, key = { it.id }) { fav ->
+                                FavoriteSeriesCard(
+                                    series = fav,
+                                    onClick = { onNavigateToSeries(fav.id) },
+                                    onRemove = {
+                                        FavoritesManager.removeFavorite(context, fav.id)
+                                        Toast.makeText(context, "تمت إزالة \"${fav.title}\" من المفضلة", Toast.LENGTH_SHORT).show()
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -487,3 +564,94 @@ private fun TerminalEmptyCard(
         )
     }
 }
+
+@Composable
+private fun HomeFeedSwitcher(
+    selectedTab: HomeFeedTab,
+    onTabSelected: (HomeFeedTab) -> Unit,
+    favoritesCount: Int,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(TerminalSurface)
+            .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        // Latest Episodes Tab
+        val isLatestSelected = selectedTab == HomeFeedTab.LATEST
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(6.dp))
+                .background(if (isLatestSelected) TerminalBg else Color.Transparent)
+                .border(
+                    1.dp,
+                    if (isLatestSelected) TerminalEmerald.copy(alpha = 0.5f) else Color.Transparent,
+                    RoundedCornerShape(6.dp)
+                )
+                .clickable { onTabSelected(HomeFeedTab.LATEST) }
+                .padding(vertical = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Bolt,
+                    contentDescription = null,
+                    tint = if (isLatestSelected) TerminalEmerald else TerminalTextMuted,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = "آخر الحلقات",
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 13.sp,
+                    fontWeight = if (isLatestSelected) FontWeight.Bold else FontWeight.Normal,
+                    color = if (isLatestSelected) TerminalTextPrimary else TerminalTextMuted
+                )
+            }
+        }
+
+        // Favorites Tab
+        val isFavoritesSelected = selectedTab == HomeFeedTab.FAVORITES
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(6.dp))
+                .background(if (isFavoritesSelected) TerminalBg else Color.Transparent)
+                .border(
+                    1.dp,
+                    if (isFavoritesSelected) TerminalEmerald.copy(alpha = 0.5f) else Color.Transparent,
+                    RoundedCornerShape(6.dp)
+                )
+                .clickable { onTabSelected(HomeFeedTab.FAVORITES) }
+                .padding(vertical = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Bookmark,
+                    contentDescription = null,
+                    tint = if (isFavoritesSelected) TerminalEmerald else TerminalTextMuted,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = if (favoritesCount > 0) "المفضلة ($favoritesCount)" else "المفضلة",
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 13.sp,
+                    fontWeight = if (isFavoritesSelected) FontWeight.Bold else FontWeight.Normal,
+                    color = if (isFavoritesSelected) TerminalTextPrimary else TerminalTextMuted
+                )
+            }
+        }
+    }
+}
+

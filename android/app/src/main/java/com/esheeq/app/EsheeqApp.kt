@@ -3,6 +3,7 @@ package com.esheeq.app
 import android.app.Application
 import com.esheeq.app.data.api.ApiClient
 import com.esheeq.app.data.repository.AppUpdateManager
+import com.esheeq.app.data.repository.FavoritesManager
 import com.esheeq.app.data.repository.PlaybackHistoryManager
 import com.esheeq.app.data.repository.SearchHistoryManager
 
@@ -13,5 +14,6 @@ class EsheeqApp : Application() {
         PlaybackHistoryManager.init(this)
         SearchHistoryManager.init(this)
         AppUpdateManager.init(this)
+        FavoritesManager.init(this)
     }
 }

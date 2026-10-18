@@ -48,3 +48,17 @@ data class DailyLink(
     @SerializedName("link") val link: String? = null,
     @SerializedName("retryable") val retryable: Boolean? = null
 )
+
+data class FavoriteSeries(
+    @SerializedName("id") val id: String,
+    @SerializedName("title") val title: String,
+    @SerializedName("cover") val cover: String,
+    @SerializedName("url") val url: String = "",
+    @SerializedName("addedAt") val addedAt: Long = System.currentTimeMillis()
+)
+
+fun SeriesDetails.toFavorite(url: String = ""): FavoriteSeries =
+    FavoriteSeries(id = id, title = title, cover = cover, url = url)
+
+fun SearchResult.toFavorite(): FavoriteSeries =
+    FavoriteSeries(id = id, title = title, cover = cover, url = url)

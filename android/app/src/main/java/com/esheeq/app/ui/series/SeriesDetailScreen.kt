@@ -25,10 +25,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -49,6 +52,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.esheeq.app.data.model.DailyLink
 import com.esheeq.app.data.model.SeriesDetails
+import com.esheeq.app.data.model.toFavorite
+import com.esheeq.app.data.repository.FavoritesManager
 import com.esheeq.app.ui.components.BadgeStyle
 import com.esheeq.app.ui.components.StatusBadge
 import com.esheeq.app.ui.components.TerminalTopBar
@@ -79,6 +84,8 @@ fun SeriesDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val favoritesList by FavoritesManager.favoritesState.collectAsState()
+    val isFavorite = favoritesList.any { it.id == seriesId }
 
     LaunchedEffect(seriesId) {
         viewModel.loadSeries(seriesId)
@@ -93,7 +100,26 @@ fun SeriesDetailScreen(
             title = "قصة عشق",
             subTitle = "فهرس المسلسلات // بيانات العمل",
             showBackButton = true,
-            onBackClick = onBackClick
+            onBackClick = onBackClick,
+            actions = {
+                val details = uiState.series
+                if (details != null) {
+                    IconButton(
+                        onClick = {
+                            val isNowFav = FavoritesManager.toggleFavorite(context, details.toFavorite())
+                            val msg = if (isNowFav) "تمت إضافة \"${details.title}\" إلى المفضلة" else "تمت إزالة \"${details.title}\" من المفضلة"
+                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Outlined.BookmarkBorder,
+                            contentDescription = if (isFavorite) "إزالة من المفضلة" else "إضافة إلى المفضلة",
+                            tint = if (isFavorite) TerminalEmerald else TerminalTextMuted
+                        )
+                    }
+                }
+            }
         )
 
         when {
@@ -171,7 +197,15 @@ fun SeriesDetailScreen(
                 ) {
                     // Header Card
                     item {
-                        SeriesInfoCard(series = series)
+                        SeriesInfoCard(
+                            series = series,
+                            isFavorite = isFavorite,
+                            onToggleFavorite = {
+                                val isNowFav = FavoritesManager.toggleFavorite(context, series.toFavorite())
+                                val msg = if (isNowFav) "تمت إضافة \"${series.title}\" إلى المفضلة" else "تمت إزالة \"${series.title}\" من المفضلة"
+                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                            }
+                        )
                     }
 
                     // Bulk Copy Bar
@@ -229,7 +263,11 @@ fun SeriesDetailScreen(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SeriesInfoCard(series: SeriesDetails) {
+private fun SeriesInfoCard(
+    series: SeriesDetails,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -305,6 +343,37 @@ private fun SeriesInfoCard(series: SeriesDetails) {
                         StatusBadge(
                             text = "مسلسل",
                             style = BadgeStyle.MUTED
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (isFavorite) TerminalEmeraldDim else TerminalSurfaceElevated)
+                            .border(
+                                1.dp,
+                                if (isFavorite) TerminalEmerald.copy(alpha = 0.5f) else TerminalBorder,
+                                RoundedCornerShape(6.dp)
+                            )
+                            .clickable { onToggleFavorite() }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Outlined.BookmarkBorder,
+                            contentDescription = null,
+                            tint = if (isFavorite) TerminalEmerald else TerminalTextPrimary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = if (isFavorite) "في المفضلة" else "إضافة للمفضلة",
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (isFavorite) TerminalEmerald else TerminalTextPrimary
                         )
                     }
                 }
