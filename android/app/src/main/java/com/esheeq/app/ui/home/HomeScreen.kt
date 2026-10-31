@@ -291,9 +291,11 @@ fun HomeScreen(
                             color = TerminalTextMuted
                         )
                         if (!uiState.isSearching) {
-                            StatusBadge(
+                            Text(
                                 text = "${uiState.searchResults.size} نتائج",
-                                style = BadgeStyle.PRIMARY
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 12.sp,
+                                color = TerminalTextMuted
                             )
                         }
                     }

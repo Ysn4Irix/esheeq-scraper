@@ -341,9 +341,11 @@ private fun SeriesInfoCard(
                             text = "${series.dailyLinks.size} حلقة",
                             style = BadgeStyle.PRIMARY
                         )
-                        StatusBadge(
-                            text = "مسلسل",
-                            style = BadgeStyle.MUTED
+                        Text(
+                            text = "مسلسل تركي",
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp,
+                            color = TerminalTextMuted
                         )
                     }
 

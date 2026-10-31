@@ -100,9 +100,11 @@ fun SeriesCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    StatusBadge(
-                        text = "مسلسل",
-                        style = BadgeStyle.PRIMARY
+                    Text(
+                        text = "مسلسل تركي",
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp,
+                        color = TerminalEmerald
                     )
                     Text(
                         text = "•",
