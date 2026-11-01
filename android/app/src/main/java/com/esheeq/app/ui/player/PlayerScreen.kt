@@ -98,7 +98,11 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import android.util.Log
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
@@ -302,7 +306,9 @@ fun PlayerScreen(
 
     // Direct stream resolution for Dailymotion and supported mirrors
     var resolvedDirectStreamUrl by remember(videoUrl) { mutableStateOf<String?>(null) }
+    var fallbackToWebEmbed by remember(videoUrl) { mutableStateOf(false) }
     LaunchedEffect(videoUrl) {
+        fallbackToWebEmbed = false
         val dmId = extractDailymotionId(videoUrl)
         if (dmId != null) {
             val directStream = DailymotionStreamResolver.resolveStreamUrl(dmId)
@@ -318,10 +324,10 @@ fun PlayerScreen(
     }
 
     val activeVideoUrl = resolvedDirectStreamUrl ?: videoUrl
-    val isDirectMedia = resolvedDirectStreamUrl != null ||
+    val isDirectMedia = !fallbackToWebEmbed && (resolvedDirectStreamUrl != null ||
             activeVideoUrl.contains(".m3u8", ignoreCase = true) ||
-            activeVideoUrl.contains(".mp4", ignoreCase = true)
-    val currentEngine = remember(activeVideoUrl, isDirectMedia) {
+            activeVideoUrl.contains(".mp4", ignoreCase = true))
+    val currentEngine = remember(activeVideoUrl, isDirectMedia, fallbackToWebEmbed) {
         if (isDirectMedia) PlayerEngine.EXO_PLAYER else PlayerEngine.WEB_EMBED
     }
 
@@ -448,13 +454,20 @@ fun PlayerScreen(
                 )
             }
             val referer = when {
-                activeVideoUrl.contains("mail.ru") || videoUrl.contains("mail.ru") -> "https://cloud.mail.ru/"
+                activeVideoUrl.contains("mail.ru") || activeVideoUrl.contains("datacloudmail") || videoUrl.contains("mail.ru") -> "https://cloud.mail.ru/"
                 activeVideoUrl.contains("ok.ru") || videoUrl.contains("ok.ru") -> "https://ok.ru/"
                 else -> "https://www.dailymotion.com/"
             }
+            val requestHeaders = buildMap {
+                put("Referer", referer)
+                if (referer.contains("mail.ru")) {
+                    put("Origin", "https://cloud.mail.ru")
+                }
+            }
             val httpDataSourceFactory = DefaultHttpDataSource.Factory()
+                .setAllowCrossProtocolRedirects(true)
                 .setUserAgent(DESKTOP_USER_AGENT)
-                .setDefaultRequestProperties(mapOf("Referer" to referer))
+                .setDefaultRequestProperties(requestHeaders)
             val mediaSourceFactory = DefaultMediaSourceFactory(context)
                 .setDataSourceFactory(httpDataSourceFactory)
 
@@ -462,8 +475,23 @@ fun PlayerScreen(
                 .setTrackSelector(trackSelector)
                 .setMediaSourceFactory(mediaSourceFactory)
                 .build().apply {
-                    val mediaItem = MediaItem.fromUri(activeVideoUrl)
+                    val mediaItem = MediaItem.Builder()
+                        .setUri(activeVideoUrl)
+                        .apply {
+                            if (activeVideoUrl.contains(".mp4", ignoreCase = true)) {
+                                setMimeType(MimeTypes.APPLICATION_MP4)
+                            } else if (activeVideoUrl.contains(".m3u8", ignoreCase = true)) {
+                                setMimeType(MimeTypes.APPLICATION_M3U8)
+                            }
+                        }
+                        .build()
                     setMediaItem(mediaItem)
+                    addListener(object : Player.Listener {
+                        override fun onPlayerError(error: PlaybackException) {
+                            Log.e("PlayerScreen", "ExoPlayer error on $activeVideoUrl: ${error.errorCodeName} (${error.errorCode})", error)
+                            fallbackToWebEmbed = true
+                        }
+                    })
                     prepare()
                     if (initialProgress != null && initialProgress.isResumeEligible) {
                         seekTo(initialProgress.positionMs)

@@ -114,3 +114,22 @@ The endpoint supports full range seeking, byte-level scrubbing, and ExoPlayer di
    - The user gets full native ExoPlayer controls (Play/Pause, Rewind 10s, FastForward 10s, Timeline scrubbing bar, Fullscreen, gesture brightness/volume).
    - Complete elimination of WebView layout problems, desktop hover issues, and touch interception bugs on `cloud.mail.ru`.
    - Full watch progress and resume position persistence via [PlaybackHistoryManager.kt](file:///c:/Users/lenovo/Desktop/Projects/antigravity/esheeq-scraper/android/app/src/main/java/com/esheeq/app/data/repository/PlaybackHistoryManager.kt).
+
+---
+
+## 5. Follow-Up: Resolving the 00:00 / 00:00 Playback Failure
+
+### 5.1 Root Cause
+When `CloudMailStreamResolver` initially returned the candidate URL (`https://cloclo*.cloud.mail.ru/weblink/view/{slug}`):
+1. ExoPlayer's `DefaultHttpDataSource` (backed by `HttpURLConnection`) sent the initial request to `cloud.mail.ru`.
+2. The server answered with `HTTP 301 Moved Permanently` pointing to `https://cloclo*.datacloudmail.ru/public/view/...`.
+3. Standard Java `HttpURLConnection` strips custom request headers (including `Referer`) when automatically following cross-domain redirects (`cloud.mail.ru` -> `datacloudmail.ru`).
+4. Without `Referer: https://cloud.mail.ru/`, `datacloudmail.ru` immediately rejected the stream with `HTTP 403 Forbidden`.
+5. Because ExoPlayer received an unhandled 403 error, the player stalled in `STATE_IDLE` with 0 duration, leaving the UI showing `00:00 . 00:00`.
+
+### 5.2 Resolution
+1. **Direct Location Resolution**: Configured `CloudMailStreamResolver` with `followRedirects(false)` to capture the final `Location` redirect URL (`https://cloclo*.datacloudmail.ru/.../{file}.mp4`) directly.
+2. **Pre-Verified Direct Stream**: ExoPlayer receives the destination MP4 URL directly, avoiding any cross-host redirects and ensuring `Referer` and `Origin` headers remain attached.
+3. **MIME Type Enforcement**: Added explicit `MimeTypes.APPLICATION_MP4` to `MediaItem.Builder` for `.mp4` URLs.
+4. **Playback Error Fallback**: Added a `Player.Listener` to `exoPlayer` that automatically switches `currentEngine` back to `PlayerEngine.WEB_EMBED` upon any playback error, ensuring users are never trapped on a blank `00:00` screen.
+
