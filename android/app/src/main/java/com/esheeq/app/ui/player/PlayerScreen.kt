@@ -109,6 +109,7 @@ import com.esheeq.app.MainActivity
 import com.esheeq.app.data.model.DailyLink
 import com.esheeq.app.data.model.SeriesDetails
 import com.esheeq.app.data.repository.AdBlockManager
+import com.esheeq.app.data.repository.CloudMailStreamResolver
 import com.esheeq.app.data.repository.DailymotionStreamResolver
 import com.esheeq.app.data.repository.PlaybackHistoryManager
 import com.esheeq.app.data.repository.SeriesRepository
@@ -308,13 +309,18 @@ fun PlayerScreen(
             if (!directStream.isNullOrBlank()) {
                 resolvedDirectStreamUrl = directStream
             }
+        } else if (CloudMailStreamResolver.isCloudMailUrl(videoUrl)) {
+            val directStream = CloudMailStreamResolver.resolveStreamUrl(videoUrl)
+            if (!directStream.isNullOrBlank()) {
+                resolvedDirectStreamUrl = directStream
+            }
         }
     }
 
     val activeVideoUrl = resolvedDirectStreamUrl ?: videoUrl
-    val isDirectMedia = activeVideoUrl.contains(".m3u8", ignoreCase = true) ||
+    val isDirectMedia = resolvedDirectStreamUrl != null ||
+            activeVideoUrl.contains(".m3u8", ignoreCase = true) ||
             activeVideoUrl.contains(".mp4", ignoreCase = true)
-
     val currentEngine = remember(activeVideoUrl, isDirectMedia) {
         if (isDirectMedia) PlayerEngine.EXO_PLAYER else PlayerEngine.WEB_EMBED
     }
@@ -441,9 +447,14 @@ fun PlayerScreen(
                         .setMaxVideoSize(3840, 2160)
                 )
             }
+            val referer = when {
+                activeVideoUrl.contains("mail.ru") || videoUrl.contains("mail.ru") -> "https://cloud.mail.ru/"
+                activeVideoUrl.contains("ok.ru") || videoUrl.contains("ok.ru") -> "https://ok.ru/"
+                else -> "https://www.dailymotion.com/"
+            }
             val httpDataSourceFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent(DESKTOP_USER_AGENT)
-                .setDefaultRequestProperties(mapOf("Referer" to "https://www.dailymotion.com/"))
+                .setDefaultRequestProperties(mapOf("Referer" to referer))
             val mediaSourceFactory = DefaultMediaSourceFactory(context)
                 .setDataSourceFactory(httpDataSourceFactory)
 
@@ -554,6 +565,21 @@ fun PlayerScreen(
                             view?.evaluateJavascript(AdBlockManager.SCRIPT_DEFUSER, null)
                             view?.evaluateJavascript(AdBlockManager.COSMETIC_HIDE_CSS, null)
                         }
+                        view?.evaluateJavascript(
+                            """
+                            (function() {
+                                if (window.__esheeqWatcherInjected) return;
+                                window.__esheeqWatcherInjected = true;
+                                setInterval(function() {
+                                    var v = document.querySelector('video');
+                                    if (v && !v.paused && v.duration > 0 && window.AndroidBridge) {
+                                        window.AndroidBridge.onTimeUpdate(Math.floor(v.currentTime * 1000), Math.floor(v.duration * 1000));
+                                    }
+                                }, 1500);
+                            })();
+                            """.trimIndent(),
+                            null
+                        )
                     }
 
                     override fun shouldOverrideUrlLoading(
@@ -917,8 +943,10 @@ fun PlayerScreen(
                                     override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
                                         val w = webView.width.toFloat()
                                         val density = context.resources.displayMetrics.density
+                                        val h = webView.height.toFloat()
                                         val isTopRightControlsArea = e.x > (w - 90f * density) && e.y < (70f * density)
-                                        if (!isTopRightControlsArea) {
+                                        val isBottomControlsArea = e.y > (h - 75f * density)
+                                        if (!isTopRightControlsArea && !isBottomControlsArea) {
                                             showFloatingControls = !showFloatingControls
                                         }
                                         return false
@@ -992,7 +1020,7 @@ fun PlayerScreen(
                     .align(Alignment.CenterStart)
                     .fillMaxHeight()
                     .padding(vertical = 76.dp)
-                    .fillMaxWidth(0.14f)
+                    .fillMaxWidth(0.09f)
                     .pointerInput(Unit) {
                         detectVerticalDragGestures(
                             onDragStart = { gestureIndicatorType = "brightness" },
@@ -1025,7 +1053,7 @@ fun PlayerScreen(
                     .align(Alignment.CenterEnd)
                     .fillMaxHeight()
                     .padding(vertical = 76.dp)
-                    .fillMaxWidth(0.14f)
+                    .fillMaxWidth(0.09f)
                     .pointerInput(Unit) {
                         detectVerticalDragGestures(
                             onDragStart = { gestureIndicatorType = "volume" },
