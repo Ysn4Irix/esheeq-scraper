@@ -1,6 +1,5 @@
 package com.esheeq.app.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -35,25 +33,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.esheeq.app.data.model.DownloadState
 import com.esheeq.app.data.model.UpdateInfo
-import com.esheeq.app.ui.theme.TerminalBg
-import com.esheeq.app.ui.theme.TerminalBlue
-import com.esheeq.app.ui.theme.TerminalBorder
-import com.esheeq.app.ui.theme.TerminalEmerald
-import com.esheeq.app.ui.theme.TerminalRed
-import com.esheeq.app.ui.theme.TerminalSurface
-import com.esheeq.app.ui.theme.TerminalSurfaceElevated
-import com.esheeq.app.ui.theme.TerminalTextMuted
-import com.esheeq.app.ui.theme.TerminalTextPrimary
+import com.esheeq.app.ui.theme.EsheeqTheme
 
 @Composable
 fun UpdateDialog(
@@ -65,6 +53,8 @@ fun UpdateDialog(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = EsheeqTheme.colors
+
     Dialog(
         onDismissRequest = {
             if (downloadState !is DownloadState.Downloading) {
@@ -80,15 +70,15 @@ fun UpdateDialog(
             modifier = modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
-                .background(TerminalSurface)
-                .border(1.dp, TerminalBorder, RoundedCornerShape(14.dp))
+                .background(colors.surface)
+                .border(1.dp, colors.border, RoundedCornerShape(14.dp))
                 .padding(20.dp)
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Header with Terminal badge and dismiss icon
+                // Header with update icon and dismiss button
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -102,14 +92,14 @@ fun UpdateDialog(
                             modifier = Modifier
                                 .size(32.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(TerminalEmerald.copy(alpha = 0.15f))
-                                .border(1.dp, TerminalEmerald.copy(alpha = 0.4f), RoundedCornerShape(8.dp)),
+                                .background(colors.emeraldDim)
+                                .border(1.dp, colors.emerald.copy(alpha = 0.4f), RoundedCornerShape(8.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.SystemUpdate,
                                 contentDescription = null,
-                                tint = TerminalEmerald,
+                                tint = colors.emerald,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -119,13 +109,13 @@ fun UpdateDialog(
                                 text = "تحديث جديد متاح",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = TerminalTextPrimary
+                                color = colors.textPrimary
                             )
                             Text(
                                 text = "NEW_VERSION_AVAILABLE",
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 10.sp,
-                                color = TerminalTextMuted
+                                color = colors.textMuted
                             )
                         }
                     }
@@ -138,20 +128,20 @@ fun UpdateDialog(
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "إغلاق",
-                                tint = TerminalTextMuted,
+                                tint = colors.textMuted,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
                     }
                 }
 
-                // Version Delta Badges
+                // Version Delta Row
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
-                        .background(TerminalBg)
-                        .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
+                        .background(colors.bg)
+                        .border(1.dp, colors.border, RoundedCornerShape(8.dp))
                         .padding(horizontal = 12.dp, vertical = 10.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -161,21 +151,21 @@ fun UpdateDialog(
                         Text(
                             text = "الإصدار الحالي",
                             fontSize = 11.sp,
-                            color = TerminalTextMuted
+                            color = colors.textMuted
                         )
                         Text(
                             text = "v${updateInfo.currentVersionName}",
                             fontFamily = FontFamily.Monospace,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
-                            color = TerminalTextMuted
+                            color = colors.textMuted
                         )
                     }
 
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = null,
-                        tint = TerminalBlue,
+                        tint = colors.blue,
                         modifier = Modifier.size(18.dp)
                     )
 
@@ -184,14 +174,14 @@ fun UpdateDialog(
                         Text(
                             text = "الإصدار الجديد",
                             fontSize = 11.sp,
-                            color = TerminalEmerald
+                            color = colors.emerald
                         )
                         Text(
                             text = "v${updateInfo.latestVersionName}",
                             fontFamily = FontFamily.Monospace,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TerminalEmerald
+                            color = colors.emerald
                         )
                     }
 
@@ -200,8 +190,8 @@ fun UpdateDialog(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(TerminalBlue.copy(alpha = 0.15f))
-                                .border(1.dp, TerminalBlue.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+                                .background(colors.blueDim)
+                                .border(1.dp, colors.blue.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
@@ -209,7 +199,7 @@ fun UpdateDialog(
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = TerminalBlue
+                                color = colors.blue
                             )
                         }
                     }
@@ -224,7 +214,7 @@ fun UpdateDialog(
                         text = "ما الجديد في هذا التحديث:",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = TerminalTextPrimary
+                        color = colors.textPrimary
                     )
 
                     val scrollState = rememberScrollState()
@@ -233,8 +223,8 @@ fun UpdateDialog(
                             .fillMaxWidth()
                             .heightIn(max = 140.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(TerminalBg)
-                            .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
+                            .background(colors.bg)
+                            .border(1.dp, colors.border, RoundedCornerShape(8.dp))
                             .padding(10.dp)
                             .verticalScroll(scrollState)
                     ) {
@@ -243,7 +233,7 @@ fun UpdateDialog(
                             fontFamily = FontFamily.Monospace,
                             fontSize = 11.sp,
                             lineHeight = 16.sp,
-                            color = TerminalTextPrimary
+                            color = colors.textPrimary
                         )
                     }
                 }
@@ -255,8 +245,8 @@ fun UpdateDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(TerminalBg)
-                                .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
+                                .background(colors.bg)
+                                .border(1.dp, colors.border, RoundedCornerShape(8.dp))
                                 .padding(12.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
@@ -269,14 +259,14 @@ fun UpdateDialog(
                                     text = "جاري تنزيل التحديث...",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium,
-                                    color = TerminalTextPrimary
+                                    color = colors.textPrimary
                                 )
                                 Text(
                                     text = "${(downloadState.progress * 100).toInt()}%",
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = TerminalEmerald
+                                    color = colors.emerald
                                 )
                             }
 
@@ -286,8 +276,8 @@ fun UpdateDialog(
                                     .fillMaxWidth()
                                     .height(6.dp)
                                     .clip(RoundedCornerShape(3.dp)),
-                                color = TerminalEmerald,
-                                trackColor = TerminalSurfaceElevated
+                                color = colors.emerald,
+                                trackColor = colors.surfaceElevated
                             )
                         }
                     }
@@ -297,8 +287,8 @@ fun UpdateDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(TerminalEmerald.copy(alpha = 0.12f))
-                                .border(1.dp, TerminalEmerald.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                                .background(colors.emeraldDim)
+                                .border(1.dp, colors.emerald.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
                                 .padding(10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -306,13 +296,13 @@ fun UpdateDialog(
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = null,
-                                tint = TerminalEmerald,
+                                tint = colors.emerald,
                                 modifier = Modifier.size(18.dp)
                             )
                             Text(
                                 text = "تم تنزيل حزمة التحديث بنجاح! جاهز للتثبيت.",
                                 fontSize = 12.sp,
-                                color = TerminalEmerald
+                                color = colors.emerald
                             )
                         }
                     }
@@ -322,8 +312,8 @@ fun UpdateDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(TerminalRed.copy(alpha = 0.12f))
-                                .border(1.dp, TerminalRed.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                                .background(colors.redDim)
+                                .border(1.dp, colors.red.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
                                 .padding(10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -331,13 +321,13 @@ fun UpdateDialog(
                             Icon(
                                 imageVector = Icons.Default.ErrorOutline,
                                 contentDescription = null,
-                                tint = TerminalRed,
+                                tint = colors.red,
                                 modifier = Modifier.size(18.dp)
                             )
                             Text(
                                 text = downloadState.message,
                                 fontSize = 11.sp,
-                                color = TerminalRed
+                                color = colors.red
                             )
                         }
                     }
@@ -359,8 +349,8 @@ fun UpdateDialog(
                                     .weight(1f)
                                     .height(42.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(TerminalSurfaceElevated)
-                                    .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
+                                    .background(colors.surfaceElevated)
+                                    .border(1.dp, colors.border, RoundedCornerShape(8.dp))
                                     .clickable { onDismiss() },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -368,7 +358,7 @@ fun UpdateDialog(
                                     text = "لاحقاً",
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Medium,
-                                    color = TerminalTextMuted
+                                    color = colors.textMuted
                                 )
                             }
 
@@ -378,7 +368,7 @@ fun UpdateDialog(
                                     .weight(1.5f)
                                     .height(42.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(TerminalEmerald)
+                                    .background(colors.emerald)
                                     .clickable { onStartDownload() },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -386,7 +376,7 @@ fun UpdateDialog(
                                     text = "تحديث الآن",
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    color = colors.onAccent
                                 )
                             }
                         }
@@ -397,8 +387,8 @@ fun UpdateDialog(
                                     .fillMaxWidth()
                                     .height(42.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(TerminalSurfaceElevated)
-                                    .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp)),
+                                    .background(colors.surfaceElevated)
+                                    .border(1.dp, colors.border, RoundedCornerShape(8.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Row(
@@ -406,7 +396,7 @@ fun UpdateDialog(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     CircularProgressIndicator(
-                                        color = TerminalEmerald,
+                                        color = colors.emerald,
                                         modifier = Modifier.size(16.dp),
                                         strokeWidth = 2.dp
                                     )
@@ -414,7 +404,7 @@ fun UpdateDialog(
                                         text = "جاري التنزيل...",
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Medium,
-                                        color = TerminalTextPrimary
+                                        color = colors.textPrimary
                                     )
                                 }
                             }
@@ -426,7 +416,7 @@ fun UpdateDialog(
                                     .fillMaxWidth()
                                     .height(42.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(TerminalEmerald)
+                                    .background(colors.emerald)
                                     .clickable { onInstallApk(downloadState.apkFile) },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -434,7 +424,7 @@ fun UpdateDialog(
                                     text = "تثبيت التحديث الآن",
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    color = colors.onAccent
                                 )
                             }
                         }
@@ -446,8 +436,8 @@ fun UpdateDialog(
                                     .weight(1f)
                                     .height(42.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(TerminalSurfaceElevated)
-                                    .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
+                                    .background(colors.surfaceElevated)
+                                    .border(1.dp, colors.border, RoundedCornerShape(8.dp))
                                     .clickable { onStartDownload() },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -455,7 +445,7 @@ fun UpdateDialog(
                                     text = "إعادة المحاولة",
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Medium,
-                                    color = TerminalTextPrimary
+                                    color = colors.textPrimary
                                 )
                             }
 
@@ -465,7 +455,7 @@ fun UpdateDialog(
                                     .weight(1.3f)
                                     .height(42.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(TerminalBlue)
+                                    .background(colors.blue)
                                     .clickable { onOpenBrowser(updateInfo.htmlUrl) },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -476,14 +466,14 @@ fun UpdateDialog(
                                     Icon(
                                         imageVector = Icons.Default.OpenInBrowser,
                                         contentDescription = null,
-                                        tint = Color.White,
+                                        tint = colors.onAccent,
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Text(
                                         text = "تنزيل من المتصفح",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color.White
+                                        color = colors.onAccent
                                     )
                                 }
                             }
@@ -503,14 +493,14 @@ fun UpdateDialog(
                     Icon(
                         imageVector = Icons.Default.OpenInBrowser,
                         contentDescription = null,
-                        tint = TerminalTextMuted,
+                        tint = colors.textMuted,
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "عرض ملاحظات الإصدار على GitHub",
                         fontSize = 11.sp,
-                        color = TerminalTextMuted
+                        color = colors.textMuted
                     )
                 }
             }

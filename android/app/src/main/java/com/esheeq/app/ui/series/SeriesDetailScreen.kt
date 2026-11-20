@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,13 +35,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -54,24 +55,12 @@ import com.esheeq.app.data.model.DailyLink
 import com.esheeq.app.data.model.SeriesDetails
 import com.esheeq.app.data.model.toFavorite
 import com.esheeq.app.data.repository.FavoritesManager
+import com.esheeq.app.data.repository.PlaybackHistoryManager
 import com.esheeq.app.ui.components.BadgeStyle
 import com.esheeq.app.ui.components.StatusBadge
 import com.esheeq.app.ui.components.TerminalTopBar
-import com.esheeq.app.ui.theme.TerminalBg
+import com.esheeq.app.ui.theme.EsheeqTheme
 import com.esheeq.app.ui.theme.TerminalBlue
-import com.esheeq.app.ui.theme.TerminalBlueDim
-import com.esheeq.app.ui.theme.TerminalBorder
-import com.esheeq.app.ui.theme.TerminalEmerald
-import com.esheeq.app.ui.theme.TerminalEmeraldDim
-import com.esheeq.app.ui.theme.TerminalRed
-import com.esheeq.app.ui.theme.TerminalRedDim
-import com.esheeq.app.ui.theme.TerminalSurface
-import com.esheeq.app.ui.theme.TerminalSurfaceElevated
-import com.esheeq.app.ui.theme.TerminalTextMuted
-import com.esheeq.app.ui.theme.TerminalTextPrimary
-
-import androidx.compose.foundation.layout.fillMaxHeight
-import com.esheeq.app.data.repository.PlaybackHistoryManager
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -84,6 +73,7 @@ fun SeriesDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val colors = EsheeqTheme.colors
     val favoritesList by FavoritesManager.favoritesState.collectAsState()
     val isFavorite = favoritesList.any { it.id == seriesId || (uiState.series != null && it.id == uiState.series?.id) }
 
@@ -94,7 +84,7 @@ fun SeriesDetailScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(TerminalBg)
+            .background(colors.bg)
     ) {
         TerminalTopBar(
             title = "قصة عشق",
@@ -110,12 +100,12 @@ fun SeriesDetailScreen(
                             val msg = if (isNowFav) "تمت إضافة \"${details.title}\" إلى المفضلة" else "تمت إزالة \"${details.title}\" من المفضلة"
                             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                         },
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
                             imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Outlined.BookmarkBorder,
                             contentDescription = if (isFavorite) "إزالة من المفضلة" else "إضافة إلى المفضلة",
-                            tint = if (isFavorite) TerminalEmerald else TerminalTextMuted
+                            tint = if (isFavorite) colors.emerald else colors.textMuted
                         )
                     }
                 }
@@ -130,7 +120,7 @@ fun SeriesDetailScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator(
-                            color = TerminalBlue,
+                            color = colors.blue,
                             modifier = Modifier.size(36.dp),
                             strokeWidth = 2.dp
                         )
@@ -139,7 +129,7 @@ fun SeriesDetailScreen(
                             text = "[*] جاري استخراج بيانات العمل والحلقات...",
                             fontFamily = FontFamily.Monospace,
                             fontSize = 12.sp,
-                            color = TerminalTextMuted
+                            color = colors.textMuted
                         )
                     }
                 }
@@ -157,22 +147,22 @@ fun SeriesDetailScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
-                            .background(TerminalRedDim)
-                            .border(1.dp, TerminalRed.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                            .background(colors.redDim)
+                            .border(1.dp, colors.red.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
                             .padding(20.dp)
                     ) {
                         Text(
                             text = "[!] خطأ: ${uiState.error}",
                             fontFamily = FontFamily.Monospace,
                             fontSize = 12.sp,
-                            color = TerminalRed
+                            color = colors.red
                         )
                         Spacer(modifier = Modifier.height(14.dp))
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(TerminalSurface)
-                                .border(1.dp, TerminalBorder, RoundedCornerShape(4.dp))
+                                .background(colors.surface)
+                                .border(1.dp, colors.border, RoundedCornerShape(4.dp))
                                 .clickable { viewModel.loadSeries(seriesId) }
                                 .padding(horizontal = 14.dp, vertical = 6.dp)
                         ) {
@@ -180,7 +170,7 @@ fun SeriesDetailScreen(
                                 text = "إعادة المحاولة",
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 12.sp,
-                                color = TerminalTextPrimary
+                                color = colors.textPrimary
                             )
                         }
                     }
@@ -232,7 +222,7 @@ fun SeriesDetailScreen(
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = TerminalTextPrimary
+                                color = colors.textPrimary
                             )
 
                             StatusBadge(
@@ -269,12 +259,14 @@ private fun SeriesInfoCard(
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit
 ) {
+    val colors = EsheeqTheme.colors
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(TerminalSurface)
-            .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
+            .background(colors.surface)
+            .border(1.dp, colors.border, RoundedCornerShape(8.dp))
             .padding(14.dp)
     ) {
         Column {
@@ -287,8 +279,8 @@ private fun SeriesInfoCard(
                     modifier = Modifier
                         .size(width = 90.dp, height = 128.dp)
                         .clip(RoundedCornerShape(6.dp))
-                        .background(TerminalBg)
-                        .border(1.dp, TerminalBorder, RoundedCornerShape(6.dp))
+                        .background(colors.bg)
+                        .border(1.dp, colors.border, RoundedCornerShape(6.dp))
                 ) {
                     if (series.cover.isNotEmpty()) {
                         AsyncImage(
@@ -299,10 +291,11 @@ private fun SeriesInfoCard(
                         )
                     }
 
+                    // Dark scrim badge over poster photo for guaranteed readability
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
-                            .background(TerminalBlueDim)
+                            .background(Color(0xD90D1117), RoundedCornerShape(topStart = 4.dp))
                             .border(1.dp, TerminalBlue.copy(alpha = 0.5f), RoundedCornerShape(topStart = 4.dp))
                             .padding(horizontal = 4.dp, vertical = 2.dp)
                     ) {
@@ -324,7 +317,7 @@ private fun SeriesInfoCard(
                         text = series.title,
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TerminalTextPrimary
+                        color = colors.textPrimary
                     )
 
                     Spacer(modifier = Modifier.height(6.dp))
@@ -345,7 +338,7 @@ private fun SeriesInfoCard(
                             text = "مسلسل تركي",
                             fontFamily = FontFamily.Monospace,
                             fontSize = 11.sp,
-                            color = TerminalTextMuted
+                            color = colors.textMuted
                         )
                     }
 
@@ -354,10 +347,10 @@ private fun SeriesInfoCard(
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(if (isFavorite) TerminalEmeraldDim else TerminalSurfaceElevated)
+                            .background(if (isFavorite) colors.emeraldDim else colors.surfaceElevated)
                             .border(
                                 1.dp,
-                                if (isFavorite) TerminalEmerald.copy(alpha = 0.5f) else TerminalBorder,
+                                if (isFavorite) colors.emerald.copy(alpha = 0.5f) else colors.border,
                                 RoundedCornerShape(6.dp)
                             )
                             .clickable { onToggleFavorite() }
@@ -368,7 +361,7 @@ private fun SeriesInfoCard(
                         Icon(
                             imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Outlined.BookmarkBorder,
                             contentDescription = null,
-                            tint = if (isFavorite) TerminalEmerald else TerminalTextPrimary,
+                            tint = if (isFavorite) colors.emerald else colors.textPrimary,
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
@@ -376,7 +369,7 @@ private fun SeriesInfoCard(
                             fontFamily = FontFamily.SansSerif,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = if (isFavorite) TerminalEmerald else TerminalTextPrimary
+                            color = if (isFavorite) colors.emerald else colors.textPrimary
                         )
                     }
                 }
@@ -389,15 +382,15 @@ private fun SeriesInfoCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(4.dp))
-                        .background(TerminalBg)
-                        .border(1.dp, TerminalBorder, RoundedCornerShape(4.dp))
+                        .background(colors.bg)
+                        .border(1.dp, colors.border, RoundedCornerShape(4.dp))
                         .padding(10.dp)
                 ) {
                     Text(
                         text = series.description,
                         fontSize = 12.sp,
                         lineHeight = 18.sp,
-                        color = TerminalTextMuted
+                        color = colors.textMuted
                     )
                 }
             }
@@ -409,7 +402,7 @@ private fun SeriesInfoCard(
                     text = "طاقم العمل والتمثيل:",
                     fontFamily = FontFamily.Monospace,
                     fontSize = 11.sp,
-                    color = TerminalTextMuted
+                    color = colors.textMuted
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 FlowRow(
@@ -420,14 +413,14 @@ private fun SeriesInfoCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(TerminalSurfaceElevated)
-                                .border(1.dp, TerminalBorder, RoundedCornerShape(4.dp))
+                                .background(colors.surfaceElevated)
+                                .border(1.dp, colors.border, RoundedCornerShape(4.dp))
                                 .padding(horizontal = 8.dp, vertical = 3.dp)
                         ) {
                             Text(
                                 text = actor.trim(),
                                 fontSize = 11.sp,
-                                color = TerminalTextPrimary
+                                color = colors.textPrimary
                             )
                         }
                     }
@@ -442,12 +435,14 @@ private fun BulkCopyBanner(
     series: SeriesDetails,
     onCopyAll: () -> Unit
 ) {
+    val colors = EsheeqTheme.colors
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(TerminalEmeraldDim)
-            .border(1.dp, TerminalEmerald.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+            .background(colors.emeraldDim)
+            .border(1.dp, colors.emerald.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
             .clickable { onCopyAll() }
             .padding(14.dp),
         contentAlignment = Alignment.Center
@@ -466,7 +461,7 @@ private fun BulkCopyBanner(
                 fontFamily = FontFamily.Monospace,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                color = TerminalEmerald
+                color = colors.emerald
             )
         }
     }
@@ -479,6 +474,7 @@ private fun EpisodeRowItem(
     onWatchClick: (String) -> Unit,
     onCopyClick: (String) -> Unit
 ) {
+    val colors = EsheeqTheme.colors
     val historyMap by PlaybackHistoryManager.historyState.collectAsState()
     val watchProgress = dailyLink.link?.let { historyMap[it] }
 
@@ -486,10 +482,10 @@ private fun EpisodeRowItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(6.dp))
-            .background(TerminalSurface)
+            .background(colors.surface)
             .border(
                 1.dp,
-                if (watchProgress?.isCompleted == true) TerminalBlue.copy(alpha = 0.5f) else TerminalBorder,
+                if (watchProgress?.isCompleted == true) colors.blue.copy(alpha = 0.5f) else colors.border,
                 RoundedCornerShape(6.dp)
             )
     ) {
@@ -517,7 +513,7 @@ private fun EpisodeRowItem(
                             text = "الحلقة ${dailyLink.episode}",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
-                            color = TerminalTextPrimary,
+                            color = colors.textPrimary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -526,7 +522,7 @@ private fun EpisodeRowItem(
                                 text = "✓ تمت المشاهدة",
                                 fontSize = 10.sp,
                                 fontFamily = FontFamily.Monospace,
-                                color = TerminalBlue
+                                color = colors.blue
                             )
                         } else if (watchProgress != null && watchProgress.isResumeEligible) {
                             val remaining = watchProgress.durationMs - watchProgress.positionMs
@@ -534,7 +530,7 @@ private fun EpisodeRowItem(
                                 text = if (remaining > 0) "متبقي ${PlaybackHistoryManager.formatTime(remaining)}" else "تمت المشاهدة جزئياً",
                                 fontSize = 10.sp,
                                 fontFamily = FontFamily.Monospace,
-                                color = TerminalEmerald
+                                color = colors.emerald
                             )
                         }
                     }
@@ -548,7 +544,7 @@ private fun EpisodeRowItem(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(if (watchProgress?.isResumeEligible == true) TerminalBlue else TerminalEmerald)
+                            .background(if (watchProgress?.isResumeEligible == true) colors.blue else colors.emerald)
                             .clickable {
                                 val link = dailyLink.link ?: ""
                                 if (link.isNotBlank()) onWatchClick(link)
@@ -563,14 +559,14 @@ private fun EpisodeRowItem(
                             Icon(
                                 imageVector = Icons.Default.PlayArrow,
                                 contentDescription = null,
-                                tint = Color.White,
+                                tint = colors.onAccent,
                                 modifier = Modifier.size(15.dp)
                             )
                             Text(
                                 text = if (watchProgress?.isResumeEligible == true) "استئناف" else "مشاهدة",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = colors.onAccent
                             )
                         }
                     }
@@ -579,8 +575,8 @@ private fun EpisodeRowItem(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(TerminalSurfaceElevated)
-                            .border(1.dp, TerminalBorder, RoundedCornerShape(6.dp))
+                            .background(colors.surfaceElevated)
+                            .border(1.dp, colors.border, RoundedCornerShape(6.dp))
                             .clickable {
                                 val link = dailyLink.link ?: ""
                                 if (link.isNotBlank()) onCopyClick(link)
@@ -595,14 +591,14 @@ private fun EpisodeRowItem(
                             Icon(
                                 imageVector = Icons.Default.ContentCopy,
                                 contentDescription = null,
-                                tint = TerminalBlue,
+                                tint = colors.blue,
                                 modifier = Modifier.size(13.dp)
                             )
                             Text(
                                 text = "نسخ",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium,
-                                color = TerminalBlue
+                                color = colors.blue
                             )
                         }
                     }
@@ -615,13 +611,13 @@ private fun EpisodeRowItem(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(3.dp)
-                        .background(TerminalBorder)
+                        .background(colors.border)
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(watchProgress.progressFraction)
                             .fillMaxHeight()
-                            .background(if (watchProgress.isCompleted) TerminalBlue else TerminalEmerald)
+                            .background(if (watchProgress.isCompleted) colors.blue else colors.emerald)
                     )
                 }
             }

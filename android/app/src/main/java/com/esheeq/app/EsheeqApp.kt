@@ -6,6 +6,7 @@ import com.esheeq.app.data.repository.AppUpdateManager
 import com.esheeq.app.data.repository.FavoritesManager
 import com.esheeq.app.data.repository.PlaybackHistoryManager
 import com.esheeq.app.data.repository.SearchHistoryManager
+import com.esheeq.app.data.repository.ThemeManager
 
 class EsheeqApp : Application() {
     override fun onCreate() {
@@ -15,5 +16,6 @@ class EsheeqApp : Application() {
         SearchHistoryManager.init(this)
         AppUpdateManager.init(this)
         FavoritesManager.init(this)
+        ThemeManager.init(this)
     }
 }

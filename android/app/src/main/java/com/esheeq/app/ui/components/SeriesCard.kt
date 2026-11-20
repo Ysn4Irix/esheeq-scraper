@@ -33,14 +33,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.esheeq.app.data.model.FavoriteSeries
 import com.esheeq.app.data.model.SearchResult
-import com.esheeq.app.ui.theme.TerminalBg
-import com.esheeq.app.ui.theme.TerminalBlue
-import com.esheeq.app.ui.theme.TerminalBorder
-import com.esheeq.app.ui.theme.TerminalEmerald
-import com.esheeq.app.ui.theme.TerminalRed
-import com.esheeq.app.ui.theme.TerminalSurface
-import com.esheeq.app.ui.theme.TerminalTextMuted
-import com.esheeq.app.ui.theme.TerminalTextPrimary
+import com.esheeq.app.ui.theme.EsheeqTheme
 
 @Composable
 fun SeriesCard(
@@ -48,12 +41,14 @@ fun SeriesCard(
     onClick: (SearchResult) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = EsheeqTheme.colors
+
     Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .background(TerminalSurface)
-            .border(1.dp, TerminalBorder, RoundedCornerShape(10.dp))
+            .background(colors.surface)
+            .border(1.dp, colors.border, RoundedCornerShape(10.dp))
             .clickable { onClick(series) }
             .padding(12.dp)
     ) {
@@ -66,8 +61,8 @@ fun SeriesCard(
                 modifier = Modifier
                     .size(width = 60.dp, height = 84.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(TerminalBg)
-                    .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
+                    .background(colors.bg)
+                    .border(1.dp, colors.border, RoundedCornerShape(8.dp))
             ) {
                 if (series.cover.isNotEmpty()) {
                     AsyncImage(
@@ -89,7 +84,7 @@ fun SeriesCard(
                     text = series.title,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
-                    color = TerminalTextPrimary,
+                    color = colors.textPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -104,18 +99,18 @@ fun SeriesCard(
                         text = "مسلسل تركي",
                         fontFamily = FontFamily.Monospace,
                         fontSize = 11.sp,
-                        color = TerminalEmerald
+                        color = colors.emerald
                     )
                     Text(
                         text = "•",
                         fontSize = 12.sp,
-                        color = TerminalTextMuted
+                        color = colors.textMuted
                     )
                     Text(
                         text = "1080p FHD",
                         fontFamily = FontFamily.Monospace,
                         fontSize = 11.sp,
-                        color = TerminalTextMuted
+                        color = colors.textMuted
                     )
                 }
             }
@@ -123,7 +118,7 @@ fun SeriesCard(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                 contentDescription = "عرض التفاصيل",
-                tint = TerminalBlue,
+                tint = colors.blue,
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -137,12 +132,14 @@ fun FavoriteSeriesCard(
     onRemove: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = EsheeqTheme.colors
+
     Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .background(TerminalSurface)
-            .border(1.dp, TerminalBorder, RoundedCornerShape(10.dp))
+            .background(colors.surface)
+            .border(1.dp, colors.border, RoundedCornerShape(10.dp))
             .clickable { onClick() }
             .padding(12.dp)
     ) {
@@ -155,8 +152,8 @@ fun FavoriteSeriesCard(
                 modifier = Modifier
                     .size(width = 60.dp, height = 84.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(TerminalBg)
-                    .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
+                    .background(colors.bg)
+                    .border(1.dp, colors.border, RoundedCornerShape(8.dp))
             ) {
                 if (series.cover.isNotEmpty()) {
                     AsyncImage(
@@ -178,7 +175,7 @@ fun FavoriteSeriesCard(
                     text = series.title,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
-                    color = TerminalTextPrimary,
+                    color = colors.textPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -193,18 +190,18 @@ fun FavoriteSeriesCard(
                         text = "مسلسل تركي",
                         fontFamily = FontFamily.Monospace,
                         fontSize = 11.sp,
-                        color = TerminalEmerald
+                        color = colors.emerald
                     )
                     Text(
                         text = "•",
                         fontSize = 12.sp,
-                        color = TerminalTextMuted
+                        color = colors.textMuted
                     )
                     Text(
                         text = "1080p FHD",
                         fontFamily = FontFamily.Monospace,
                         fontSize = 11.sp,
-                        color = TerminalTextMuted
+                        color = colors.textMuted
                     )
                 }
             }
@@ -215,12 +212,12 @@ fun FavoriteSeriesCard(
             ) {
                 IconButton(
                     onClick = onRemove,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.BookmarkRemove,
                         contentDescription = "إزالة من المفضلة",
-                        tint = TerminalRed,
+                        tint = colors.red,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -228,11 +225,10 @@ fun FavoriteSeriesCard(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                     contentDescription = "عرض التفاصيل",
-                    tint = TerminalBlue,
+                    tint = colors.blue,
                     modifier = Modifier.size(24.dp)
                 )
             }
         }
     }
 }
-

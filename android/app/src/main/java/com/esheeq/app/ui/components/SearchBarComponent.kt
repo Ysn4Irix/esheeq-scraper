@@ -30,11 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.esheeq.app.ui.theme.TerminalBlue
-import com.esheeq.app.ui.theme.TerminalBorder
-import com.esheeq.app.ui.theme.TerminalSurface
-import com.esheeq.app.ui.theme.TerminalTextMuted
-import com.esheeq.app.ui.theme.TerminalTextPrimary
+import com.esheeq.app.ui.theme.EsheeqTheme
 
 @Composable
 fun SearchBarComponent(
@@ -45,13 +41,14 @@ fun SearchBarComponent(
     modifier: Modifier = Modifier
 ) {
     val focusManager = LocalFocusManager.current
+    val colors = EsheeqTheme.colors
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(TerminalSurface)
-            .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
+            .background(colors.surface)
+            .border(1.dp, colors.border, RoundedCornerShape(8.dp))
             .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {
         Row(
@@ -63,7 +60,7 @@ fun SearchBarComponent(
                 text = ">",
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
-                color = TerminalBlue,
+                color = colors.blue,
                 fontSize = 16.sp
             )
 
@@ -73,7 +70,7 @@ fun SearchBarComponent(
                 if (query.isEmpty()) {
                     Text(
                         text = placeholder,
-                        color = TerminalTextMuted,
+                        color = colors.textMuted,
                         fontSize = 13.sp,
                         fontFamily = FontFamily.SansSerif
                     )
@@ -85,11 +82,11 @@ fun SearchBarComponent(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     textStyle = TextStyle(
-                        color = TerminalTextPrimary,
+                        color = colors.textPrimary,
                         fontSize = 14.sp,
                         fontFamily = FontFamily.SansSerif
                     ),
-                    cursorBrush = SolidColor(TerminalBlue),
+                    cursorBrush = SolidColor(colors.blue),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(
                         onSearch = {
@@ -103,12 +100,12 @@ fun SearchBarComponent(
             if (query.isNotEmpty()) {
                 IconButton(
                     onClick = { onQueryChange("") },
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(28.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Clear,
                         contentDescription = "مسح",
-                        tint = TerminalTextMuted,
+                        tint = colors.textMuted,
                         modifier = Modifier.size(16.dp)
                     )
                 }

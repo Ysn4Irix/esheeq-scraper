@@ -12,12 +12,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
@@ -29,7 +29,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.esheeq.app.data.repository.PlaybackHistoryManager
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -42,14 +41,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.esheeq.app.data.model.LatestEpisode
-import com.esheeq.app.ui.theme.TerminalBg
-import com.esheeq.app.ui.theme.TerminalBlue
-import com.esheeq.app.ui.theme.TerminalBorder
+import com.esheeq.app.data.repository.PlaybackHistoryManager
+import com.esheeq.app.ui.theme.EsheeqTheme
 import com.esheeq.app.ui.theme.TerminalEmerald
-import com.esheeq.app.ui.theme.TerminalSurface
-import com.esheeq.app.ui.theme.TerminalSurfaceElevated
-import com.esheeq.app.ui.theme.TerminalTextMuted
-import com.esheeq.app.ui.theme.TerminalTextPrimary
 
 @Composable
 fun LatestEpisodeCard(
@@ -58,6 +52,7 @@ fun LatestEpisodeCard(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val colors = EsheeqTheme.colors
     val historyMap by PlaybackHistoryManager.historyState.collectAsState()
     val targetUrl = episode.streamLink ?: episode.url
     val watchProgress = historyMap[targetUrl]
@@ -66,8 +61,8 @@ fun LatestEpisodeCard(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(TerminalSurface)
-            .border(1.dp, TerminalBorder, RoundedCornerShape(12.dp))
+            .background(colors.surface)
+            .border(1.dp, colors.border, RoundedCornerShape(12.dp))
     ) {
         Row(
             modifier = Modifier
@@ -80,8 +75,8 @@ fun LatestEpisodeCard(
                 modifier = Modifier
                     .size(width = 64.dp, height = 88.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(TerminalBg)
-                    .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
+                    .background(colors.bg)
+                    .border(1.dp, colors.border, RoundedCornerShape(8.dp))
                     .clickable { onWatchClick(episode) }
             ) {
                 if (episode.thumb.isNotEmpty()) {
@@ -93,7 +88,7 @@ fun LatestEpisodeCard(
                     )
                 }
 
-                // Scrim gradient for contrast
+                // Scrim gradient for contrast over poster imagery
                 Box(
                     modifier = Modifier
                         .matchParentSize()
@@ -138,7 +133,7 @@ fun LatestEpisodeCard(
                             modifier = Modifier
                                 .fillMaxWidth(watchProgress.progressFraction)
                                 .fillMaxHeight()
-                                .background(if (watchProgress.isCompleted) TerminalBlue else TerminalEmerald)
+                                .background(if (watchProgress.isCompleted) colors.blue else colors.emerald)
                         )
                     }
                 }
@@ -156,7 +151,7 @@ fun LatestEpisodeCard(
                     text = episode.seriesTitle.ifEmpty { episode.title },
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
-                    color = TerminalTextPrimary,
+                    color = colors.textPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -175,14 +170,14 @@ fun LatestEpisodeCard(
                     Text(
                         text = "•",
                         fontSize = 12.sp,
-                        color = TerminalTextMuted
+                        color = colors.textMuted
                     )
 
                     Text(
                         text = "1080p FHD",
                         fontFamily = FontFamily.Monospace,
                         fontSize = 11.sp,
-                        color = TerminalTextMuted
+                        color = colors.textMuted
                     )
                 }
 
@@ -191,7 +186,7 @@ fun LatestEpisodeCard(
                 Text(
                     text = "سيرفر سريع • جودة أصلية",
                     fontSize = 11.sp,
-                    color = TerminalTextMuted,
+                    color = colors.textMuted,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -199,7 +194,7 @@ fun LatestEpisodeCard(
 
             Spacer(modifier = Modifier.width(10.dp))
 
-            // Direct Actions Column on the LEFT (Eliminating the empty space)
+            // Direct Actions Column
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -210,7 +205,7 @@ fun LatestEpisodeCard(
                         .width(88.dp)
                         .height(36.dp)
                         .clip(RoundedCornerShape(6.dp))
-                        .background(TerminalEmerald)
+                        .background(colors.emerald)
                         .clickable { onWatchClick(episode) },
                     contentAlignment = Alignment.Center
                 ) {
@@ -221,14 +216,14 @@ fun LatestEpisodeCard(
                         Icon(
                             imageVector = Icons.Default.PlayArrow,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint = colors.onAccent,
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
                             text = "مشاهدة",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = colors.onAccent
                         )
                     }
                 }
@@ -239,8 +234,8 @@ fun LatestEpisodeCard(
                         .width(88.dp)
                         .height(32.dp)
                         .clip(RoundedCornerShape(6.dp))
-                        .background(TerminalSurfaceElevated)
-                        .border(1.dp, TerminalBorder, RoundedCornerShape(6.dp))
+                        .background(colors.surfaceElevated)
+                        .border(1.dp, colors.border, RoundedCornerShape(6.dp))
                         .clickable {
                             val linkToCopy = episode.streamLink ?: episode.url
                             copyToClipboard(context, linkToCopy)
@@ -254,14 +249,14 @@ fun LatestEpisodeCard(
                         Icon(
                             imageVector = Icons.Default.ContentCopy,
                             contentDescription = null,
-                            tint = TerminalBlue,
+                            tint = colors.blue,
                             modifier = Modifier.size(13.dp)
                         )
                         Text(
                             text = "نسخ الرابط",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Medium,
-                            color = TerminalBlue
+                            color = colors.blue
                         )
                     }
                 }

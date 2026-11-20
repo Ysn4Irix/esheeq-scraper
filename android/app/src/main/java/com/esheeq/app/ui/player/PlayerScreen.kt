@@ -117,7 +117,7 @@ import com.esheeq.app.data.repository.CloudMailStreamResolver
 import com.esheeq.app.data.repository.DailymotionStreamResolver
 import com.esheeq.app.data.repository.PlaybackHistoryManager
 import com.esheeq.app.data.repository.SeriesRepository
-import com.esheeq.app.ui.theme.TerminalBg
+import com.esheeq.app.ui.theme.EsheeqTheme
 import com.esheeq.app.ui.theme.TerminalBlue
 import com.esheeq.app.ui.theme.TerminalBorder
 import com.esheeq.app.ui.theme.TerminalEmerald
@@ -247,13 +247,14 @@ fun PlayerScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val themeColors = EsheeqTheme.colors
     val activity = context as? Activity
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     // Immersive mode: hide status bar, navigation bar, and bottom area for true edge-to-edge playback
-    DisposableEffect(activity) {
+    DisposableEffect(activity, themeColors) {
         val window = activity?.window
         val insetsController = if (window != null) {
             WindowCompat.getInsetsController(window, window.decorView)
@@ -278,6 +279,8 @@ fun PlayerScreen(
         window?.navigationBarColor = AndroidColor.TRANSPARENT
 
         insetsController?.apply {
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             hide(WindowInsetsCompat.Type.systemBars())
         }
@@ -293,11 +296,13 @@ fun PlayerScreen(
             }
 
             @Suppress("DEPRECATION")
-            window?.statusBarColor = TerminalBg.toArgb()
+            window?.statusBarColor = themeColors.surface.toArgb()
             @Suppress("DEPRECATION")
-            window?.navigationBarColor = TerminalBg.toArgb()
+            window?.navigationBarColor = themeColors.bg.toArgb()
 
             insetsController?.apply {
+                isAppearanceLightStatusBars = !themeColors.isDark
+                isAppearanceLightNavigationBars = !themeColors.isDark
                 systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
                 show(WindowInsetsCompat.Type.systemBars())
             }

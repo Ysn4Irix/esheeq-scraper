@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,13 +26,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.esheeq.app.ui.theme.TerminalBlue
-import com.esheeq.app.ui.theme.TerminalBorder
-import com.esheeq.app.ui.theme.TerminalSurface
-import com.esheeq.app.ui.theme.TerminalTextMuted
-import com.esheeq.app.ui.theme.TerminalTextPrimary
-
-import androidx.compose.foundation.layout.RowScope
+import com.esheeq.app.ui.theme.EsheeqTheme
 
 @Composable
 fun TerminalTopBar(
@@ -42,14 +37,16 @@ fun TerminalTopBar(
     onBackClick: () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {}
 ) {
+    val colors = EsheeqTheme.colors
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(TerminalSurface)
+            .background(colors.surface)
             .statusBarsPadding()
             .border(
                 width = 1.dp,
-                color = TerminalBorder,
+                color = colors.border,
                 shape = RoundedCornerShape(0.dp)
             )
             .padding(horizontal = 16.dp, vertical = 12.dp)
@@ -65,12 +62,12 @@ fun TerminalTopBar(
                 if (showBackButton) {
                     IconButton(
                         onClick = onBackClick,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "الرجوع",
-                            tint = TerminalBlue
+                            tint = colors.blue
                         )
                     }
                     Spacer(modifier = Modifier.width(8.dp))
@@ -83,21 +80,21 @@ fun TerminalTopBar(
                         text = "[",
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold,
-                        color = TerminalBlue,
+                        color = colors.blue,
                         fontSize = 20.sp
                     )
                     Text(
                         text = title,
                         fontFamily = FontFamily.SansSerif,
                         fontWeight = FontWeight.Bold,
-                        color = TerminalTextPrimary,
+                        color = colors.textPrimary,
                         fontSize = 19.sp
                     )
                     Text(
                         text = "]",
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold,
-                        color = TerminalBlue,
+                        color = colors.blue,
                         fontSize = 20.sp
                     )
                 }
@@ -117,7 +114,7 @@ fun TerminalTopBar(
                 text = subTitle,
                 fontFamily = FontFamily.Monospace,
                 fontSize = 11.sp,
-                color = TerminalTextMuted
+                color = colors.textMuted
             )
         }
     }

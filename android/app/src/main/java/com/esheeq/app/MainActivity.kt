@@ -12,12 +12,14 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
+import com.esheeq.app.data.repository.ThemeManager
 import com.esheeq.app.ui.navigation.EsheeqNavGraph
 import com.esheeq.app.ui.theme.EsheeqTheme
-import com.esheeq.app.ui.theme.TerminalBg
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,11 +27,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            EsheeqTheme {
+            val themeMode by ThemeManager.themeModeState.collectAsState()
+            EsheeqTheme(themeMode = themeMode) {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
-                        color = TerminalBg
+                        color = EsheeqTheme.colors.bg
                     ) {
                         EsheeqNavGraph()
                     }

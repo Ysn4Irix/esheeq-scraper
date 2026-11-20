@@ -1,11 +1,13 @@
 package com.esheeq.app.ui.home
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -18,20 +20,24 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import android.widget.Toast
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.outlined.BrightnessAuto
+import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -43,16 +49,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.esheeq.app.data.model.LatestEpisode
-import com.esheeq.app.data.model.SearchResult
+import com.esheeq.app.data.repository.AppThemeMode
 import com.esheeq.app.data.repository.AppUpdateManager
 import com.esheeq.app.data.repository.FavoritesManager
+import com.esheeq.app.data.repository.ThemeManager
 import com.esheeq.app.ui.components.BadgeStyle
 import com.esheeq.app.ui.components.FavoriteSeriesCard
 import com.esheeq.app.ui.components.LatestEpisodeCard
@@ -61,16 +68,7 @@ import com.esheeq.app.ui.components.SeriesCard
 import com.esheeq.app.ui.components.StatusBadge
 import com.esheeq.app.ui.components.TerminalTopBar
 import com.esheeq.app.ui.components.UpdateDialog
-import com.esheeq.app.ui.theme.TerminalBg
-import com.esheeq.app.ui.theme.TerminalBlue
-import com.esheeq.app.ui.theme.TerminalBorder
-import com.esheeq.app.ui.theme.TerminalEmerald
-import com.esheeq.app.ui.theme.TerminalRed
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import com.esheeq.app.ui.theme.TerminalRedDim
-import com.esheeq.app.ui.theme.TerminalSurface
-import com.esheeq.app.ui.theme.TerminalTextMuted
-import com.esheeq.app.ui.theme.TerminalTextPrimary
+import com.esheeq.app.ui.theme.EsheeqTheme
 import kotlinx.coroutines.launch
 
 enum class HomeFeedTab {
@@ -87,6 +85,10 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val colors = EsheeqTheme.colors
+    val themeMode by ThemeManager.themeModeState.collectAsState()
+    var showThemeMenu by remember { mutableStateOf(false) }
+
     val coroutineScope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsState()
     val searchHistory by viewModel.searchHistory.collectAsState()
@@ -109,11 +111,81 @@ fun HomeScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(TerminalBg)
+            .background(colors.bg)
     ) {
         TerminalTopBar(
             title = "قصة عشق",
             actions = {
+                // Theme selector (System / Light / Dark)
+                Box {
+                    val themeIcon = when (themeMode) {
+                        AppThemeMode.SYSTEM -> Icons.Outlined.BrightnessAuto
+                        AppThemeMode.LIGHT -> Icons.Outlined.LightMode
+                        AppThemeMode.DARK -> Icons.Outlined.DarkMode
+                    }
+                    IconButton(
+                        onClick = { showThemeMenu = true },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = themeIcon,
+                            contentDescription = "مظهر التطبيق",
+                            tint = colors.textMuted,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = showThemeMenu,
+                        onDismissRequest = { showThemeMenu = false },
+                        modifier = Modifier
+                            .background(colors.surface)
+                            .border(1.dp, colors.border, RoundedCornerShape(6.dp))
+                    ) {
+                        val options = listOf(
+                            Triple(AppThemeMode.SYSTEM, "تلقائي (حسب النظام)", Icons.Outlined.BrightnessAuto),
+                            Triple(AppThemeMode.LIGHT, "الوضع الفاتح", Icons.Outlined.LightMode),
+                            Triple(AppThemeMode.DARK, "الوضع الداكن", Icons.Outlined.DarkMode)
+                        )
+                        options.forEach { (mode, label, icon) ->
+                            val isSelected = themeMode == mode
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = label,
+                                        fontSize = 13.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSelected) colors.blue else colors.textPrimary
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        tint = if (isSelected) colors.blue else colors.textMuted,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                },
+                                trailingIcon = {
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = colors.blue,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    ThemeManager.setThemeMode(context, mode)
+                                    showThemeMenu = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                // App Update check action
                 Box {
                     IconButton(
                         onClick = {
@@ -137,11 +209,11 @@ fun HomeScreen(
                                 }
                             }
                         },
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(40.dp)
                     ) {
                         if (isCheckingUpdates) {
                             CircularProgressIndicator(
-                                color = TerminalBlue,
+                                color = colors.blue,
                                 modifier = Modifier.size(18.dp),
                                 strokeWidth = 2.dp
                             )
@@ -149,7 +221,7 @@ fun HomeScreen(
                             Icon(
                                 imageVector = Icons.Default.SystemUpdate,
                                 contentDescription = "فحص التحديثات",
-                                tint = if (latestUpdateInfo?.isUpdateAvailable == true) TerminalEmerald else TerminalTextMuted,
+                                tint = if (latestUpdateInfo?.isUpdateAvailable == true) colors.emerald else colors.textMuted,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -160,7 +232,7 @@ fun HomeScreen(
                             modifier = Modifier
                                 .size(8.dp)
                                 .clip(CircleShape)
-                                .background(TerminalEmerald)
+                                .background(colors.emerald)
                                 .align(Alignment.TopEnd)
                         )
                     }
@@ -191,8 +263,8 @@ fun HomeScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
-                            .background(TerminalSurface)
-                            .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
+                            .background(colors.surface)
+                            .border(1.dp, colors.border, RoundedCornerShape(8.dp))
                             .padding(12.dp)
                     ) {
                         Row(
@@ -207,7 +279,7 @@ fun HomeScreen(
                                 Icon(
                                     imageVector = Icons.Default.History,
                                     contentDescription = null,
-                                    tint = TerminalBlue,
+                                    tint = colors.blue,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Text(
@@ -215,7 +287,7 @@ fun HomeScreen(
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = TerminalTextMuted
+                                    color = colors.textMuted
                                 )
                             }
 
@@ -223,7 +295,7 @@ fun HomeScreen(
                                 text = "مسح الكل",
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 11.sp,
-                                color = TerminalTextMuted,
+                                color = colors.textMuted,
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(4.dp))
                                     .clickable { viewModel.clearHistory(context) }
@@ -242,8 +314,8 @@ fun HomeScreen(
                                 Row(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(6.dp))
-                                        .background(Color(0xFF161B22))
-                                        .border(1.dp, TerminalBorder, RoundedCornerShape(6.dp))
+                                        .background(colors.surfaceElevated)
+                                        .border(1.dp, colors.border, RoundedCornerShape(6.dp))
                                         .clickable {
                                             viewModel.onSearchQueryChanged(historyQuery)
                                             viewModel.recordSearch(context, historyQuery)
@@ -256,7 +328,7 @@ fun HomeScreen(
                                         text = "> $historyQuery",
                                         fontFamily = FontFamily.Monospace,
                                         fontSize = 12.sp,
-                                        color = TerminalTextPrimary
+                                        color = colors.textPrimary
                                     )
                                     IconButton(
                                         onClick = { viewModel.removeHistoryItem(context, historyQuery) },
@@ -265,7 +337,7 @@ fun HomeScreen(
                                         Icon(
                                             imageVector = Icons.Default.Close,
                                             contentDescription = "حذف",
-                                            tint = TerminalTextMuted,
+                                            tint = colors.textMuted,
                                             modifier = Modifier.size(12.dp)
                                         )
                                     }
@@ -288,14 +360,14 @@ fun HomeScreen(
                             text = "نتائج البحث // الاستعلام: \"${uiState.searchQuery}\"",
                             fontFamily = FontFamily.Monospace,
                             fontSize = 12.sp,
-                            color = TerminalTextMuted
+                            color = colors.textMuted
                         )
                         if (!uiState.isSearching) {
                             Text(
                                 text = "${uiState.searchResults.size} نتائج",
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 12.sp,
-                                color = TerminalTextMuted
+                                color = colors.textMuted
                             )
                         }
                     }
@@ -310,7 +382,7 @@ fun HomeScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             CircularProgressIndicator(
-                                color = TerminalBlue,
+                                color = colors.blue,
                                 modifier = Modifier.size(32.dp),
                                 strokeWidth = 2.dp
                             )
@@ -363,7 +435,7 @@ fun HomeScreen(
                                         modifier = Modifier
                                             .size(width = 4.dp, height = 18.dp)
                                             .clip(RoundedCornerShape(2.dp))
-                                            .background(TerminalEmerald)
+                                            .background(colors.emerald)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
@@ -371,7 +443,7 @@ fun HomeScreen(
                                         fontFamily = FontFamily.SansSerif,
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = TerminalTextPrimary
+                                        color = colors.textPrimary
                                     )
                                 }
                                 StatusBadge(
@@ -391,7 +463,7 @@ fun HomeScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     CircularProgressIndicator(
-                                        color = TerminalEmerald,
+                                        color = colors.emerald,
                                         modifier = Modifier.size(32.dp),
                                         strokeWidth = 2.dp
                                     )
@@ -435,7 +507,7 @@ fun HomeScreen(
                                         modifier = Modifier
                                             .size(width = 4.dp, height = 18.dp)
                                             .clip(RoundedCornerShape(2.dp))
-                                            .background(TerminalEmerald)
+                                            .background(colors.emerald)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
@@ -443,7 +515,7 @@ fun HomeScreen(
                                         fontFamily = FontFamily.SansSerif,
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = TerminalTextPrimary
+                                        color = colors.textPrimary
                                     )
                                 }
                                 if (favoritesList.isNotEmpty()) {
@@ -451,7 +523,7 @@ fun HomeScreen(
                                         text = "${favoritesList.size} عمل محفوظ",
                                         fontFamily = FontFamily.Monospace,
                                         fontSize = 12.sp,
-                                        color = TerminalTextMuted
+                                        color = colors.textMuted
                                     )
                                 }
                             }
@@ -514,12 +586,14 @@ private fun TerminalErrorCard(
     message: String,
     onRetry: () -> Unit
 ) {
+    val colors = EsheeqTheme.colors
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(TerminalRedDim)
-            .border(1.dp, TerminalRed.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+            .background(colors.redDim)
+            .border(1.dp, colors.red.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
             .padding(16.dp)
     ) {
         Column(
@@ -530,14 +604,14 @@ private fun TerminalErrorCard(
                 text = "[!] خطأ في جلب البيانات: $message",
                 fontFamily = FontFamily.Monospace,
                 fontSize = 12.sp,
-                color = TerminalRed
+                color = colors.red
             )
             Spacer(modifier = Modifier.height(12.dp))
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(4.dp))
-                    .background(TerminalSurface)
-                    .border(1.dp, TerminalBorder, RoundedCornerShape(4.dp))
+                    .background(colors.surface)
+                    .border(1.dp, colors.border, RoundedCornerShape(4.dp))
                     .clickable { onRetry() }
                     .padding(horizontal = 14.dp, vertical = 6.dp)
             ) {
@@ -545,7 +619,7 @@ private fun TerminalErrorCard(
                     text = "إعادة المحاولة",
                     fontFamily = FontFamily.Monospace,
                     fontSize = 12.sp,
-                    color = TerminalTextPrimary
+                    color = colors.textPrimary
                 )
             }
         }
@@ -556,12 +630,14 @@ private fun TerminalErrorCard(
 private fun TerminalEmptyCard(
     message: String
 ) {
+    val colors = EsheeqTheme.colors
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(TerminalSurface)
-            .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
+            .background(colors.surface)
+            .border(1.dp, colors.border, RoundedCornerShape(8.dp))
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -569,7 +645,7 @@ private fun TerminalEmptyCard(
             text = "[*] $message",
             fontFamily = FontFamily.Monospace,
             fontSize = 12.sp,
-            color = TerminalTextMuted
+            color = colors.textMuted
         )
     }
 }
@@ -581,12 +657,14 @@ private fun HomeFeedSwitcher(
     favoritesCount: Int,
     modifier: Modifier = Modifier
 ) {
+    val colors = EsheeqTheme.colors
+
     Row(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(TerminalSurface)
-            .border(1.dp, TerminalBorder, RoundedCornerShape(8.dp))
+            .background(colors.surface)
+            .border(1.dp, colors.border, RoundedCornerShape(8.dp))
             .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
@@ -596,10 +674,10 @@ private fun HomeFeedSwitcher(
             modifier = Modifier
                 .weight(1f)
                 .clip(RoundedCornerShape(6.dp))
-                .background(if (isLatestSelected) TerminalBg else Color.Transparent)
+                .background(if (isLatestSelected) colors.bg else Color.Transparent)
                 .border(
                     1.dp,
-                    if (isLatestSelected) TerminalEmerald.copy(alpha = 0.5f) else Color.Transparent,
+                    if (isLatestSelected) colors.emerald.copy(alpha = 0.5f) else Color.Transparent,
                     RoundedCornerShape(6.dp)
                 )
                 .clickable { onTabSelected(HomeFeedTab.LATEST) }
@@ -613,7 +691,7 @@ private fun HomeFeedSwitcher(
                 Icon(
                     imageVector = Icons.Default.Bolt,
                     contentDescription = null,
-                    tint = if (isLatestSelected) TerminalEmerald else TerminalTextMuted,
+                    tint = if (isLatestSelected) colors.emerald else colors.textMuted,
                     modifier = Modifier.size(16.dp)
                 )
                 Text(
@@ -621,7 +699,7 @@ private fun HomeFeedSwitcher(
                     fontFamily = FontFamily.SansSerif,
                     fontSize = 13.sp,
                     fontWeight = if (isLatestSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isLatestSelected) TerminalTextPrimary else TerminalTextMuted
+                    color = if (isLatestSelected) colors.textPrimary else colors.textMuted
                 )
             }
         }
@@ -632,10 +710,10 @@ private fun HomeFeedSwitcher(
             modifier = Modifier
                 .weight(1f)
                 .clip(RoundedCornerShape(6.dp))
-                .background(if (isFavoritesSelected) TerminalBg else Color.Transparent)
+                .background(if (isFavoritesSelected) colors.bg else Color.Transparent)
                 .border(
                     1.dp,
-                    if (isFavoritesSelected) TerminalEmerald.copy(alpha = 0.5f) else Color.Transparent,
+                    if (isFavoritesSelected) colors.emerald.copy(alpha = 0.5f) else Color.Transparent,
                     RoundedCornerShape(6.dp)
                 )
                 .clickable { onTabSelected(HomeFeedTab.FAVORITES) }
@@ -649,7 +727,7 @@ private fun HomeFeedSwitcher(
                 Icon(
                     imageVector = Icons.Default.Bookmark,
                     contentDescription = null,
-                    tint = if (isFavoritesSelected) TerminalEmerald else TerminalTextMuted,
+                    tint = if (isFavoritesSelected) colors.emerald else colors.textMuted,
                     modifier = Modifier.size(16.dp)
                 )
                 Text(
@@ -657,10 +735,9 @@ private fun HomeFeedSwitcher(
                     fontFamily = FontFamily.SansSerif,
                     fontSize = 13.sp,
                     fontWeight = if (isFavoritesSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isFavoritesSelected) TerminalTextPrimary else TerminalTextMuted
+                    color = if (isFavoritesSelected) colors.textPrimary else colors.textMuted
                 )
             }
         }
     }
 }
-
